@@ -3,5 +3,9 @@ uuid = "f47dce41-c8ad-4b69-b8b4-f2a36c7ebdf8"
 authors = ["stecrotti <stefano.crotti@polito.it>"]
 version = "1.0.0-DEV"
 
+[deps]
+CavityTools = "217fe2f1-7e3d-419f-9934-cd6900c2759a"
+IndexedGraphs = "8a731c18-cfb7-4915-927e-cc26b56b67cd"
+
 [compat]
 julia = "1.9"
