@@ -2,7 +2,6 @@ using BeliefPropagation
 using Test
 using Aqua
 using Graphs
-# using SparseArrays
 using IndexedGraphs
 
 @testset "Code quality (Aqua.jl)" begin
@@ -11,3 +10,5 @@ using IndexedGraphs
 end
 
 include("ising.jl")
+
+nothing
