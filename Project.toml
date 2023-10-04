@@ -8,4 +8,6 @@ CavityTools = "217fe2f1-7e3d-419f-9934-cd6900c2759a"
 IndexedGraphs = "8a731c18-cfb7-4915-927e-cc26b56b67cd"
 
 [compat]
+CavityTools = "0.1"
+IndexedGraphs = "0.3"
 julia = "1.9"
