@@ -19,13 +19,20 @@ using BeliefPropagation.Models
 end
 
 @testset "Ising random tree" begin
-    N = 10
-    g = prufer_decode(rand(1:N, N-2)) |> IndexedGraph
-    J = randn(ne(g))
-    h = randn(nv(g))
-    β = rand()
+    rng = MersenneTwister(0)
+    N = 8
+    g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
+    J = rand(rng, ne(g))
+    h = rand(rng, nv(g))
+    β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
     iterate!(bp; maxiter=100)
+    b = beliefs(bp)
+    b_ex = exact_marginals(ising)
+    @test b ≈ b_ex
+    pb = factor_beliefs(bp)
+    pb_ex = exact_pair_marginals(ising)
+    @test pb ≈ pb_ex
 end
 

@@ -1,4 +1,4 @@
-potts2spin(x) = 3-2x
+potts2spin(x) = 3 - 2x
 # spin2potts(σ) = (3-σ)/2
 
 struct IsingCoupling{T<:Real}  <: BPFactor 
@@ -8,8 +8,7 @@ end
 function (f::IsingCoupling)(x)
     (; βJ) = f
     @assert length(x) == 2
-    E = - βJ * prod(potts2spin(xᵢ) for xᵢ in x)
-    return 1 / (1 + exp(2E))
+    return exp(βJ * prod(potts2spin(xᵢ) for xᵢ in x))
 end
 
 struct IsingField{T<:Real}  <: VertexBPFactor 
@@ -18,8 +17,7 @@ end
 
 function (f::IsingField)(x::Integer)
     (; βh) = f
-    E = - βh * potts2spin(x)
-    return 1 / (1 + exp(2E))
+    return exp(βh * potts2spin(x))
 end
 
 # Ising model with xᵢ ∈ {1,2} mapped onto spins {+1,-1}
@@ -71,6 +69,13 @@ function exact_marginals(ising::Ising; p_exact = exact_prob(ising))
     dims = 1:ndims(p_exact)
     return map(dims) do i
         vec(sum(p_exact; dims=dims[Not(i)]))
+    end
+end
+
+function exact_pair_marginals(ising::Ising; p_exact = exact_prob(ising))
+    dims = 1:ndims(p_exact)
+    return map(edges(ising.g)) do (i, j)
+        Matrix(dropdims(sum(p_exact; dims=dims[Not(i, j)]), dims=tuple(dims[Not(i, j)]...)))
     end
 end
 

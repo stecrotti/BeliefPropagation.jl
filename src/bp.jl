@@ -56,9 +56,9 @@ function update_factor!(bp::BP, a::Integer)
         u[idx(ai)] .= 0
     end
     for xₐ in Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)
-        for (i, ia) in pairs(∂a)
-            u[idx(ia)][xₐ[i]] += ψₐ(xₐ) * 
-                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if ja != ia)
+        for (i, ai) in pairs(∂a)
+            u[idx(ai)][xₐ[i]] += ψₐ(xₐ) * 
+                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i)
         end
     end
     for uₐᵢ in u[idx.(∂a)]
@@ -83,12 +83,13 @@ function factor_beliefs(bp::BP)
     (; g, ψ, h) = bp
     return map(factors(g)) do fa
         a = fa.a
-        ∂a = inedges(g, Factor(a))
+        ∂a = edges(g, Factor(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
+        bₐ
     end
 end
