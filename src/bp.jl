@@ -1,4 +1,4 @@
-struct BP{G<:FactorGraph, F<:BPFactor, FV<:VertexBPFactor, M, MB, T<:Real}
+struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:VertexBPFactor, MB, T<:Real}
     g :: G                              # graph
     ψ :: Vector{F}                      # factors
     ϕ :: Vector{FV}      # vertex-dependent factors
@@ -20,7 +20,7 @@ struct BP{G<:FactorGraph, F<:BPFactor, FV<:VertexBPFactor, M, MB, T<:Real}
         length(h) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `h`, $(length(h))"))
         length(b) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `b`, $(length(b))"))
         length(f) == nvert || throw(DimensionMismatch("Number of nodes in factor graph `g`, $nvert, does not match length of `f`, $(length(f))"))
-        new{G,F,FV,M,MB,T}(g, ψ, ϕ, u, h, b, f)
+        new{F,M,G,FV,MB,T}(g, ψ, ϕ, u, h, b, f)
     end
 end
 
@@ -36,7 +36,7 @@ nstates(bp::BP, i::Integer) = length(bp.b[i])
 beliefs(bp::BP) = bp.b
 
 function update_variable!(bp::BP, i::Integer)
-    (; g, ψ, ϕ, u, h, b, f) = bp
+    (; g, ϕ, u, h, b) = bp
     ∂i = edges(g, Variable(i))
     msg_mult(m1, m2) = m1 .* m2
     ϕᵢ = [ϕ[i](x) for x in 1:nstates(bp, i)]
@@ -49,7 +49,7 @@ function update_variable!(bp::BP, i::Integer)
 end
 
 function update_factor!(bp::BP, a::Integer)
-    (; g, ψ, ϕ, u, h, b, f) = bp
+    (; g, ψ, u, h) = bp
     ∂a = inedges(g, Factor(a))
     ψₐ = ψ[a]
     for ai in ∂a
@@ -77,4 +77,18 @@ function iterate!(bp::BP; maxiter=100)
         end
     end
     return nothing
+end
+
+function factor_beliefs(bp::BP)
+    (; g, ψ, h) = bp
+    return map(factors(g)) do fa
+        a = fa.a
+        ∂a = inedges(g, Factor(a))
+        ψₐ = ψ[a]
+        bₐ = map(Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)) do xₐ
+            ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a))
+        end
+        zₐ = sum(bₐ)
+        bₐ ./= zₐ
+    end
 end

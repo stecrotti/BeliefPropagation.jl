@@ -9,6 +9,6 @@ include("bpfactor.jl")
 include("bp.jl")
 include("Models/Models.jl")
 
-export BP, beliefs, iterate!
+export BP, beliefs, factor_beliefs, iterate! 
 
 end
