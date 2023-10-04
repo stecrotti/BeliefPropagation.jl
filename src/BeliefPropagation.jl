@@ -3,7 +3,7 @@ module BeliefPropagation
 using IndexedGraphs: FactorGraph, Variable, Factor
 using IndexedGraphs
 
-using CavityTools: cavity!
+using CavityTools: cavity
 
 include("bpfactor.jl")
 include("bp.jl")

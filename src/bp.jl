@@ -1,4 +1,4 @@
-struct BP{G, F, FV, M, MB, T}
+struct BP{G<:FactorGraph, F<:BPFactor, FV<:VertexBPFactor, M, MB, T<:Real}
     g :: G                              # graph
     ψ :: Vector{F}                      # factors
     ϕ :: Vector{FV}      # vertex-dependent factors
@@ -6,6 +6,22 @@ struct BP{G, F, FV, M, MB, T}
     h :: Vector{M}                      # messages variable -> factor
     b :: Vector{MB}                     # beliefs
     f :: Vector{T}                      # free energy contributions
+
+    function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, b::Vector{MB},
+        f::Vector{T}) where {G<:FactorGraph, F<:BPFactor, FV<:VertexBPFactor, M, MB, T<:Real}
+
+        nvar = nvariables(g)
+        nfact = nfactors(g)
+        nedges = ne(g)
+        nvert = nv(g)
+        length(ψ) == nfact || throw(DimensionMismatch("Number of factor nodes in factor graph `g`, $nfact, does not match length of `ψ`, $(length(ψ))"))
+        length(ϕ) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `ϕ`, $(length(ϕ))"))
+        length(u) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `u`, $(length(u))"))
+        length(h) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `h`, $(length(h))"))
+        length(b) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `b`, $(length(b))"))
+        length(f) == nvert || throw(DimensionMismatch("Number of nodes in factor graph `g`, $nvert, does not match length of `f`, $(length(f))"))
+        new{G,F,FV,M,MB,T}(g, ψ, ϕ, u, h, b, f)
+    end
 end
 
 function BP(g, ψ, qs; ϕ = [UniformVertexFactor(q) for q in qs])
@@ -21,12 +37,11 @@ beliefs(bp::BP) = bp.b
 
 function update_variable!(bp::BP, i::Integer)
     (; g, ψ, ϕ, u, h, b, f) = bp
-    ein = inedges(g, Variable(i))
-    eout = outedges(g, Variable(i))
+    ∂i = edges(g, Variable(i))
     msg_mult(m1, m2) = m1 .* m2
     ϕᵢ = [ϕ[i](x) for x in 1:nstates(bp, i)]
-    b[i] = cavity!(h[idx.(eout)], u[idx.(ein)], msg_mult, ϕᵢ)
-    for hᵢₐ in h[idx.(eout)]
+    h[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
+    for hᵢₐ in h[idx.(∂i)]
         hᵢₐ ./= sum(hᵢₐ)
     end
     b[i] ./= sum(b[i])
@@ -35,18 +50,18 @@ end
 
 function update_factor!(bp::BP, a::Integer)
     (; g, ψ, ϕ, u, h, b, f) = bp
-    ein = inedges(g, Factor(a))
-    eout = outedges(g, Factor(a))
-    for ai in eout
+    ∂a = inedges(g, Factor(a))
+    ψₐ = ψ[a]
+    for ai in ∂a
         u[idx(ai)] .= 0
     end
-    for xₐ in Iterators.product((1:nstates(bp, e.i) for e in ein)...)
-        for (ia, ai) in zip(ein, eout)
-            u[idx(ai)] .+= ψ[a](xₐ) * 
-                reduce(.*, h[idx(ja)][xₐ[j]] for (j, ja) in pairs(ein) if ja != ia)
+    for xₐ in Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)
+        for (i, ia) in pairs(∂a)
+            u[idx(ia)][xₐ[i]] += ψₐ(xₐ) * 
+                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if ja != ia)
         end
     end
-    for uₐᵢ in u[idx.(eout)]
+    for uₐᵢ in u[idx.(∂a)]
         uₐᵢ ./= sum(uₐᵢ)
     end
     return nothing
