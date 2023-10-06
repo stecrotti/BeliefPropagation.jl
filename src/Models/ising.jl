@@ -11,7 +11,7 @@ function (f::IsingCoupling)(x)
     return exp(βJ * prod(potts2spin(xᵢ) for xᵢ in x))
 end
 
-struct IsingField{T<:Real}  <: VertexBPFactor 
+struct IsingField{T<:Real}  <: BPFactor 
     βh :: T 
 end
 
@@ -80,7 +80,7 @@ function exact_pair_marginals(ising::Ising; p_exact = exact_prob(ising))
 end
 
 function BeliefPropagation.BP(ising::Ising)
-    g = FactorGraph(ising.g)
+    g = pairwise_interaction_graph(ising.g)
     ψ = [IsingCoupling(ising.β * Jᵢⱼ) for Jᵢⱼ in ising.J]
     ϕ = [IsingField(ising.β * hᵢ) for hᵢ in ising.h]
     qs = fill(2, nvariables(g))

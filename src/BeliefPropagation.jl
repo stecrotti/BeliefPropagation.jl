@@ -1,14 +1,18 @@
 module BeliefPropagation
 
-using IndexedGraphs: FactorGraph, Variable, Factor
-using IndexedGraphs     # needs new release with bugfixes
+include("FactorGraphs/FactorGraphs.jl")
 
-using CavityTools: cavity     # needs new release with bugfixes
+using .FactorGraphs
+
+using CavityTools: cavity 
+
+using Random: AbstractRNG, GLOBAL_RNG
 
 include("bpfactor.jl")
 include("bp.jl")
 include("Models/Models.jl")
 
-export BP, beliefs, factor_beliefs, iterate! 
+export FactorGraph, variables, factors, nvariables, nfactors,
+    BP, rand_bp, beliefs, factor_beliefs, iterate! 
 
 end

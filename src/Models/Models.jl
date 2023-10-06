@@ -1,6 +1,8 @@
 module Models 
 
-using BeliefPropagation: BPFactor, VertexBPFactor
+using BeliefPropagation.FactorGraphs: pairwise_interaction_graph
+
+using BeliefPropagation: BPFactor
 using BeliefPropagation
 
 using IndexedGraphs

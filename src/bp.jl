@@ -1,4 +1,4 @@
-struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:VertexBPFactor, MB, T<:Real}
+struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:BPFactor, MB, T<:Real}
     g :: G                              # graph
     ψ :: Vector{F}                      # factors
     ϕ :: Vector{FV}      # vertex-dependent factors
@@ -8,7 +8,7 @@ struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:VertexBPFactor, MB, T<:Real}
     f :: Vector{T}                      # free energy contributions
 
     function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, b::Vector{MB},
-        f::Vector{T}) where {G<:FactorGraph, F<:BPFactor, FV<:VertexBPFactor, M, MB, T<:Real}
+        f::Vector{T}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB, T<:Real}
 
         nvar = nvariables(g)
         nfact = nfactors(g)
@@ -24,12 +24,17 @@ struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:VertexBPFactor, MB, T<:Real}
     end
 end
 
-function BP(g, ψ, qs; ϕ = [UniformVertexFactor(q) for q in qs])
-    u = [ones(qs[e.i]) for e in edges(g)]
-    h = [ones(qs[e.i]) for e in edges(g)]
-    b = [ones(qs[i.i]) for i in variables(g)]
+function BP(g::FactorGraph, ψ, qs; ϕ = [UniformVertexFactor(q) for q in qs])
+    u = [ones(qs[dst(e)]) for e in edges(g)]
+    h = [ones(qs[dst(e)]) for e in edges(g)]
+    b = [ones(qs[i]) for i in variables(g)]
     f = zeros(nv(g))
     return BP(g, ψ, ϕ, u, h, b, f)
+end
+
+function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
+    ψ = [random_factor(rng, [qs[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
+    return BP(g, ψ, qs)  
 end
 
 nstates(bp::BP, i::Integer) = length(bp.b[i])
@@ -37,9 +42,9 @@ beliefs(bp::BP) = bp.b
 
 function update_variable!(bp::BP, i::Integer)
     (; g, ϕ, u, h, b) = bp
-    ∂i = edges(g, Variable(i))
-    msg_mult(m1, m2) = m1 .* m2
+    ∂i = outedges(g, variable(i))
     ϕᵢ = [ϕ[i](x) for x in 1:nstates(bp, i)]
+    msg_mult(m1, m2) = m1 .* m2
     h[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
     for hᵢₐ in h[idx.(∂i)]
         hᵢₐ ./= sum(hᵢₐ)
@@ -50,12 +55,12 @@ end
 
 function update_factor!(bp::BP, a::Integer)
     (; g, ψ, u, h) = bp
-    ∂a = inedges(g, Factor(a))
+    ∂a = inedges(g, factor(a))
     ψₐ = ψ[a]
     for ai in ∂a
         u[idx(ai)] .= 0
     end
-    for xₐ in Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)
+    for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
         for (i, ai) in pairs(∂a)
             u[idx(ai)][xₐ[i]] += ψₐ(xₐ) * 
                 prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i)
@@ -70,10 +75,10 @@ end
 function iterate!(bp::BP; maxiter=100)
     for it in 1:maxiter
         for i in variables(bp.g)
-            update_variable!(bp, i.i)
+            update_variable!(bp, i)
         end
         for a in factors(bp.g)
-            update_factor!(bp, a.a)
+            update_factor!(bp, a)
         end
     end
     return nothing
@@ -81,11 +86,10 @@ end
 
 function factor_beliefs(bp::BP)
     (; g, ψ, h) = bp
-    return map(factors(g)) do fa
-        a = fa.a
-        ∂a = edges(g, Factor(a))
+    return map(factors(g)) do a
+        ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, e.i) for e in ∂a)...)) do xₐ
+        bₐ = map(Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a))
         end
         zₐ = sum(bₐ)
