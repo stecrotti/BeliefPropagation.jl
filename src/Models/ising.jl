@@ -79,6 +79,15 @@ function exact_pair_marginals(ising::Ising; p_exact = exact_prob(ising))
     end
 end
 
+function exact_avg_energy(ising::Ising; p_exact = exact_prob(ising))
+    k = keys(p_exact)
+    sum(energy(ising, Tuple(k[x])) * p_exact[x] for x in eachindex(p_exact))
+end
+
+function minimum_energy(ising::Ising)
+    return minimum(energy(ising, x) for x in Iterators.product(fill(1:2, nv(ising.g))...))
+end
+
 function BeliefPropagation.BP(ising::Ising)
     g = pairwise_interaction_graph(ising.g)
     ψ = [IsingCoupling(ising.β * Jᵢⱼ) for Jᵢⱼ in ising.J]

@@ -1,11 +1,11 @@
-struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:BPFactor, MB, T<:Real}
-    g :: G                              # graph
-    ψ :: Vector{F}                      # factors
+struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph, T<:Real}
+    g :: G               # graph
+    ψ :: Vector{F}       # factors
     ϕ :: Vector{FV}      # vertex-dependent factors
-    u :: Vector{M}                      # messages factor -> variable
-    h :: Vector{M}                      # messages variable -> factor
-    b :: Vector{MB}                     # beliefs
-    f :: Vector{T}                      # free energy contributions
+    u :: Vector{M}       # messages factor -> variable
+    h :: Vector{M}       # messages variable -> factor
+    b :: Vector{MB}      # beliefs
+    f :: Vector{T}       # free energy contributions
 
     function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, b::Vector{MB},
         f::Vector{T}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB, T<:Real}
@@ -20,7 +20,7 @@ struct BP{F<:BPFactor, M, G<:FactorGraph, FV<:BPFactor, MB, T<:Real}
         length(h) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `h`, $(length(h))"))
         length(b) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `b`, $(length(b))"))
         length(f) == nvert || throw(DimensionMismatch("Number of nodes in factor graph `g`, $nvert, does not match length of `f`, $(length(f))"))
-        new{F,M,G,FV,MB,T}(g, ψ, ϕ, u, h, b, f)
+        new{F,FV,M,MB,G,T}(g, ψ, ϕ, u, h, b, f)
     end
 end
 
@@ -38,9 +38,26 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
 end
 
 nstates(bp::BP, i::Integer) = length(bp.b[i])
-beliefs(bp::BP) = bp.b
+beliefs(f, bp::BP) = f(bp)
+beliefs_bp(bp::BP) = bp.b
+beliefs(bp::BP) = beliefs(beliefs_bp, bp)
+factor_beliefs(f, bp::BP) = f(bp)
+avg_energy(f, bp::BP) = f(bp)
 
-function update_variable!(bp::BP, i::Integer)
+function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
+        maxiter=100)
+    for it in 1:maxiter
+        for i in variables(bp.g)
+            update_variable!(bp, i)
+        end
+        for a in factors(bp.g)
+            update_factor!(bp, a)
+        end
+    end
+    return nothing
+end
+
+function update_v_bp!(bp::BP, i::Integer)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i))
     ϕᵢ = [ϕ[i](x) for x in 1:nstates(bp, i)]
@@ -49,11 +66,12 @@ function update_variable!(bp::BP, i::Integer)
     for hᵢₐ in h[idx.(∂i)]
         hᵢₐ ./= sum(hᵢₐ)
     end
-    b[i] ./= sum(b[i])
+    zᵢ = sum(b[i])
+    b[i] ./= zᵢ
     return nothing
 end
 
-function update_factor!(bp::BP, a::Integer)
+function update_f_bp!(bp::BP, a::Integer)
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))
     ψₐ = ψ[a]
@@ -72,19 +90,7 @@ function update_factor!(bp::BP, a::Integer)
     return nothing
 end
 
-function iterate!(bp::BP; maxiter=100)
-    for it in 1:maxiter
-        for i in variables(bp.g)
-            update_variable!(bp, i)
-        end
-        for a in factors(bp.g)
-            update_factor!(bp, a)
-        end
-    end
-    return nothing
-end
-
-function factor_beliefs(bp::BP)
+function factor_beliefs_bp(bp::BP)
     (; g, ψ, h) = bp
     return map(factors(g)) do a
         ∂a = inedges(g, factor(a))
@@ -97,3 +103,22 @@ function factor_beliefs(bp::BP)
         bₐ
     end
 end
+factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
+
+function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
+    (; g, ψ, ϕ) = bp
+    e = 0.0
+    for a in factors(g)
+        ∂a = inedges(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
+            e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
+        end
+    end
+    for i in variables(g)
+        for xᵢ in eachindex(b[i])
+            e += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
+        end
+    end
+    return e
+end
+avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)

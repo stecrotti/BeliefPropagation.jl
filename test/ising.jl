@@ -22,8 +22,8 @@ end
     rng = MersenneTwister(0)
     N = 8
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
-    J = rand(rng, ne(g))
-    h = rand(rng, nv(g))
+    J = randn(rng, ne(g))
+    h = randn(rng, nv(g))
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
@@ -34,5 +34,22 @@ end
     pb = factor_beliefs(bp)
     pb_ex = exact_pair_marginals(ising)
     @test pb ≈ pb_ex
+    e = avg_energy(bp)
+    e_ex = exact_avg_energy(ising) * β
+    @test e ≈ e_ex
 end
 
+@testset "Ising random tree - maxsum" begin
+    rng = MersenneTwister(0)
+    N = 10
+    g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
+    J = randn(rng, ne(g))
+    h = randn(rng, nv(g))
+    β = rand(rng)
+    ising = Ising(g, J, h, β)
+    bp = BP(ising)
+    iterate_ms!(bp; maxiter=100)
+    e = avg_energy(avg_energy_ms, bp)
+    e_ex = minimum_energy(ising) * β
+    @test e ≈ e_ex
+end
