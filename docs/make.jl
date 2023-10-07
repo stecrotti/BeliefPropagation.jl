@@ -1,7 +1,8 @@
 using BeliefPropagation
 using Documenter
 
-DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup, :(using BeliefPropagation); recursive=true)
+DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup, 
+    :(using BeliefPropagation, BeliefPropagation.FactorGraphs); recursive=true)
 
 makedocs(;
     modules=[BeliefPropagation],
