@@ -13,13 +13,12 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph, T<:Real}
         nvar = nvariables(g)
         nfact = nfactors(g)
         nedges = ne(g)
-        nvert = nv(g)
         length(ψ) == nfact || throw(DimensionMismatch("Number of factor nodes in factor graph `g`, $nfact, does not match length of `ψ`, $(length(ψ))"))
         length(ϕ) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `ϕ`, $(length(ϕ))"))
         length(u) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `u`, $(length(u))"))
         length(h) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `h`, $(length(h))"))
         length(b) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `b`, $(length(b))"))
-        length(f) == nvert || throw(DimensionMismatch("Number of nodes in factor graph `g`, $nvert, does not match length of `f`, $(length(f))"))
+        length(f) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `f`, $(length(f))"))
         new{F,FV,M,MB,G,T}(g, ψ, ϕ, u, h, b, f)
     end
 end
@@ -28,7 +27,7 @@ function BP(g::FactorGraph, ψ, qs; ϕ = [UniformFactor(q) for q in qs])
     u = [ones(qs[dst(e)]) for e in edges(g)]
     h = [ones(qs[dst(e)]) for e in edges(g)]
     b = [ones(qs[i]) for i in variables(g)]
-    f = zeros(nv(g))
+    f = zeros(nvariables(g))
     return BP(g, ψ, ϕ, u, h, b, f)
 end
 
@@ -48,6 +47,7 @@ avg_energy(f, bp::BP) = f(bp)
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100)
     for it in 1:maxiter
+        bp.f .= 0
         for i in variables(bp.g)
             update_variable!(bp, i)
         end
@@ -59,21 +59,26 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
 end
 
 function update_v_bp!(bp::BP, i::Integer)
-    (; g, ϕ, u, h, b) = bp
-    ∂i = outedges(g, variable(i))
+    (; g, ϕ, u, h, b, f) = bp
+    ∂i = outedges(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) for x in 1:nstates(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
     h[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
-    for hᵢₐ in h[idx.(∂i)]
-        hᵢₐ ./= sum(hᵢₐ)
+    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    for (ia, dₐ) in zip(∂i, d)
+        hᵢₐ = h[idx(ia)]
+        zᵢ₂ₐ = sum(hᵢₐ)
+        f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
+        hᵢₐ ./= zᵢ₂ₐ
     end
     zᵢ = sum(b[i])
+    f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] ./= zᵢ
     return nothing
 end
 
 function update_f_bp!(bp::BP, a::Integer)
-    (; g, ψ, u, h) = bp
+    (; g, ψ, u, h, f) = bp
     ∂a = inedges(g, factor(a))
     ψₐ = ψ[a]
     for ai in ∂a
@@ -85,8 +90,12 @@ function update_f_bp!(bp::BP, a::Integer)
                 prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=1.0)
         end
     end
-    for uₐᵢ in u[idx.(∂a)]
-        uₐᵢ ./= sum(uₐᵢ)
+    dₐ = degree(g, factor(a))
+    for (i, _, id) in ∂a
+        uₐᵢ = u[id]
+        zₐ₂ᵢ = sum(uₐᵢ)
+        f[i] -= log(zₐ₂ᵢ) / dₐ
+        uₐᵢ ./= zₐ₂ᵢ
     end
     return nothing
 end
@@ -96,8 +105,9 @@ function factor_beliefs_bp(bp::BP)
     return map(factors(g)) do a
         ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)) do xₐ
-            ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
+        bₐ = zeros((nstates(bp, src(ia)) for ia in ∂a)...)
+        for xₐ in keys(bₐ)
+            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
@@ -124,20 +134,4 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
 end
 avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 
-function bethe_free_energy(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
-    (; g, ψ, ϕ) = bp
-    f = 0.0
-    for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            f += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
-        end
-    end
-    for i in variables(g)
-        dᵢ = degree(g, variable(i))
-        for xᵢ in eachindex(b[i])
-            f += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
-        end
-    end
-    return f
-end
+bethe_free_energy(bp::BP) = sum(bp.f)

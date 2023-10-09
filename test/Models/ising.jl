@@ -1,6 +1,7 @@
 @testset "Ising 2 spins" begin
     J = randn(1)
     h = randn(2)
+    h = zeros(2)
     β = rand()
     g = IndexedGraph(path_graph(2))
     ising = Ising(g, J, h, β)
@@ -10,12 +11,14 @@
     m = reduce.(-, b)
     pb = only(factor_beliefs(bp))
     c = pb[1,1] + pb[2,2] - pb[1,2] - pb[2,1]
-    Z = exp(-bethe_free_energy(bp))
+    f = bethe_free_energy(bp)
+    z = exp(-f)
 
     @test m[1] ≈ tanh(β * h[1] + atanh(tanh(β * h[2])*tanh(β*J[1])))
     @test m[2] ≈ tanh(β * h[2] + atanh(tanh(β * h[1])*tanh(β*J[1])))
     @test c ≈ tanh(β * J[1] + atanh(tanh(β * h[1])*tanh(β*h[2])))
-    @test Z ≈ 4*(cosh(β*J[1])*cosh(β*h[1])*cosh(β*h[2]) + sinh(β*J[1])*sinh(β*h[1])*sinh(β*h[2]))
+    @test z ≈ 4*(cosh(β*J[1])*cosh(β*h[1])*cosh(β*h[2]) + 
+                    sinh(β*J[1])*sinh(β*h[1])*sinh(β*h[2]))
 end
 
 @testset "Ising random tree" begin
@@ -24,6 +27,7 @@ end
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
     J = randn(rng, ne(g))
     h = randn(rng, nv(g))
+    h = zeros(nv(g))
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
@@ -37,7 +41,8 @@ end
     e = avg_energy(bp)
     e_ex = exact_avg_energy(ising) * β
     @test e ≈ e_ex
-    z = exp(-bethe_free_energy(bp))
+    f = bethe_free_energy(bp)
+    z = exp(-f)
     z_ex = exact_normalization(ising)
 end
 

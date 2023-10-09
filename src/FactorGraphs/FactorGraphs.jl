@@ -217,6 +217,9 @@ end
 function IndexedGraphs.degree(g::FactorGraph, v::FactorGraphVertex)
     return degree(g.g, linearindex(g.g, v))
 end
+function IndexedGraphs.degree(g::FactorGraph, i::Integer)
+    return throw(ArgumentError("Properties of a vertex of a `FactorGraph` such as degree, neighbors, etc. cannot be accessed using an integer. Use a `FactorGraphVertex` instead."))
+end
 
 IndexedGraphs.adjacency_matrix(g::FactorGraph, T::DataType=Int) = g.g.A
 

@@ -13,7 +13,10 @@ struct TabulatedBPFactor{N,F} <: BPFactor
     values :: Array{N,F}
 end
 
-(f::TabulatedBPFactor)(x) = f.values[x...]
+function (f::TabulatedBPFactor)(x) 
+    isempty(x) && return 1.0
+    return f.values[x...]
+end
 
 # for tests: convert any factor into a `TabulatedBPFactor`
 # `states` is an iterable with integers
