@@ -4,7 +4,7 @@ using IndexedGraphs:
     AbstractIndexedGraph, IndexedGraph, IndexedEdge, BipartiteIndexedGraph, 
     BipartiteGraphVertex,
     NullNumber,
-    src, dst, idx, edges, nv, ne, 
+    src, dst, idx, edges, nv, ne, degree, linearindex,
     nv_left, nv_right, Left, Right
     
 using IndexedGraphs
@@ -214,9 +214,12 @@ function IndexedGraphs.edges(g::FactorGraph)
     return (IndexedEdge(A.rowval[k], j, k) for j=1:size(A, 2) for k=nzrange(A, j))
 end
 
+function IndexedGraphs.degree(g::FactorGraph, v::FactorGraphVertex)
+    return degree(g.g, linearindex(g.g, v))
+end
 
 export FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
     pairwise_interaction_graph,
-    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv
+    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree
 
 end
