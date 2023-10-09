@@ -3,6 +3,7 @@ using Test
 using Aqua
 using Graphs
 using IndexedGraphs
+using SparseArrays
 using Random
 
 @testset "Code quality (Aqua.jl)" begin
@@ -10,6 +11,14 @@ using Random
     Aqua.test_ambiguities(BeliefPropagation)
 end
 
-include("ising.jl")
+using BeliefPropagation.FactorGraphs
+@testset "FactorGraphs" begin
+    include("FactorGraphs/factorgraphs.jl")
+end
+
+using BeliefPropagation.Models
+@testset "Ising" begin
+    include("Models/ising.jl")
+end
 
 nothing

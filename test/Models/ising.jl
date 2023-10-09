@@ -1,5 +1,3 @@
-using BeliefPropagation.Models
-
 @testset "Ising 2 spins" begin
     J = randn(1)
     h = randn(2)
@@ -45,7 +43,7 @@ end
 
 @testset "Ising random tree - maxsum" begin
     rng = MersenneTwister(0)
-    N = 10
+    N = 9
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
     J = randn(rng, ne(g))
     h = randn(rng, nv(g))

@@ -7,6 +7,7 @@ using BeliefPropagation
 
 using IndexedGraphs
 using InvertedIndices
+using LinearAlgebra: Symmetric
 
 include("ising.jl")
 

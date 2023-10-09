@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "bc5a60acec5ea4264b2760b96a8697da6f1b52f2"
+project_hash = "fd9b28c3e4350015c74e72d82f5642c3e2cee022"
 
 [[deps.Aqua]]
 deps = ["Compat", "Pkg", "Test"]
