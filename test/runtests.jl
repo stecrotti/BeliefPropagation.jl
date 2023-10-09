@@ -16,6 +16,10 @@ using BeliefPropagation.FactorGraphs
     include("FactorGraphs/factorgraphs.jl")
 end
 
+@testset "BeliefPropagation" begin
+    include("bp.jl")
+end
+
 using BeliefPropagation.Models
 @testset "Ising" begin
     include("Models/ising.jl")

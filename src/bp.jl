@@ -24,7 +24,7 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph, T<:Real}
     end
 end
 
-function BP(g::FactorGraph, ψ, qs; ϕ = [UniformVertexFactor(q) for q in qs])
+function BP(g::FactorGraph, ψ, qs; ϕ = [UniformFactor(q) for q in qs])
     u = [ones(qs[dst(e)]) for e in edges(g)]
     h = [ones(qs[dst(e)]) for e in edges(g)]
     b = [ones(qs[i]) for i in variables(g)]
@@ -36,6 +36,7 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
     ψ = [random_factor(rng, [qs[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
     return BP(g, ψ, qs)  
 end
+rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
 
 nstates(bp::BP, i::Integer) = length(bp.b[i])
 beliefs(f, bp::BP) = f(bp)
@@ -81,7 +82,7 @@ function update_f_bp!(bp::BP, a::Integer)
     for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
         for (i, ai) in pairs(∂a)
             u[idx(ai)][xₐ[i]] += ψₐ(xₐ) * 
-                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i)
+                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=1.0)
         end
     end
     for uₐᵢ in u[idx.(∂a)]
@@ -96,7 +97,7 @@ function factor_beliefs_bp(bp::BP)
         ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)) do xₐ
-            ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a))
+            ψₐ(xₐ) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ

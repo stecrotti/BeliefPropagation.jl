@@ -27,7 +27,7 @@ function update_f_ms!(bp::BP, a::Integer)
     for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
         for (i, ai) in pairs(∂a)
             u[idx(ai)][xₐ[i]] = max(u[idx(ai)][xₐ[i]],  log(ψₐ(xₐ)) + 
-                sum(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i) )
+                sum(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=1.0))
         end
     end
     for uₐᵢ in u[idx.(∂a)]
@@ -44,7 +44,7 @@ function factor_beliefs_ms(bp::BP)
         ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)) do xₐ
-            log(ψₐ(xₐ)) + sum(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a))
+            log(ψₐ(xₐ)) + sum(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
         end
         zₐ = maximum(bₐ)
         bₐ .-= zₐ

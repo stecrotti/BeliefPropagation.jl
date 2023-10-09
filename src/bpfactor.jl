@@ -13,7 +13,7 @@ struct TabulatedBPFactor{N,F} <: BPFactor
     values :: Array{N,F}
 end
 
-(f::TabulatedBPFactor)(x) = f.values(x...)
+(f::TabulatedBPFactor)(x) = f.values[x...]
 
 # for tests: convert any factor into a `TabulatedBPFactor`
 # `states` is an iterable with integers
@@ -23,6 +23,7 @@ function TabulatedBPFactor(f::AbstractBPFactor, states)
 end
 
 function random_factor(rng::AbstractRNG, states)
+    isempty(states) && return TabulatedBPFactor(zeros(0))
     values = rand(rng, states...)
     return TabulatedBPFactor(values)
 end

@@ -218,8 +218,11 @@ function IndexedGraphs.degree(g::FactorGraph, v::FactorGraphVertex)
     return degree(g.g, linearindex(g.g, v))
 end
 
+IndexedGraphs.adjacency_matrix(g::FactorGraph, T::DataType=Int) = g.g.A
+
 export FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
     pairwise_interaction_graph,
-    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree
+    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree,
+    adjacency_matrix
 
 end
