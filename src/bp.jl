@@ -52,6 +52,7 @@ bethe_free_energy(f, bp::BP) = f(bp)
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
+        callback = (bp, ε, it) -> nothing,
         extra_kwargs...
         )
     (; g, u, h) = bp
@@ -60,11 +61,14 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     for it in 1:maxiter
         f .= 0
         for i in variables(bp.g)
-            update_variable!(bp, i, hnew, damp, rein*it, f; extra_kwargs...)
+            errv[i] = update_variable!(bp, i, hnew, damp, rein*it, f; extra_kwargs...)
         end
         for a in factors(bp.g)
-            update_factor!(bp, a, unew, damp, f; extra_kwargs...)
+            errf[a] = update_factor!(bp, a, unew, damp, f; extra_kwargs...)
         end
+        ε = max(maximum(errv), maximum(errf))
+        callback(bp, ε, it)
+        ε < tol && return it
     end
     return maxiter
 end
@@ -94,16 +98,18 @@ function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
     msg_mult(m1, m2) = m1 .* m2
     hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    err = -Inf
     for ((_,_,id), dₐ) in zip(∂i, d)
         zᵢ₂ₐ = sum(hnew[id])
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
         hnew[id] ./= zᵢ₂ₐ
+        err = max(err, mean(abs, hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
     zᵢ = sum(b[i])
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] ./= zᵢ
-    return nothing
+    return err
 end
 
 function update_f_bp!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(bp.g));
@@ -121,13 +127,15 @@ function update_f_bp!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(b
         end
     end
     dₐ = degree(g, factor(a))
+    err = -Inf
     for (i, _, id) in ∂a
         zₐ₂ᵢ = sum(unew[id])
         f[i] -= log(zₐ₂ᵢ) / dₐ
         unew[id] ./= zₐ₂ᵢ
+        err = max(err, mean(abs, unew[id] - u[id]))
         u[id] = damp!(u[id], unew[id], damp)
     end
-    return nothing
+    return err
 end
 
 beliefs_bp(bp::BP) = bp.b

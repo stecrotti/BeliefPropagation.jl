@@ -6,7 +6,7 @@
     g = IndexedGraph(path_graph(2))
     ising = Ising(g, J, h, β)
     bp = BP(ising)
-    iterate!(bp, maxiter=2)
+    iterate!(bp, maxiter=2, tol=0)
     b = beliefs(bp)
     m = reduce.(-, b)
     pb = only(factor_beliefs(bp))
@@ -32,7 +32,7 @@ end
     ising = Ising(g, J, h, β)
     bp = BP(ising)
     f = zeros(N)
-    iterate!(bp; maxiter=100, f)
+    iterate!(bp; maxiter=20, f, tol=0)
     b = beliefs(bp)
     b_ex = exact_marginals(bp)
     @test b ≈ b_ex
@@ -58,7 +58,7 @@ end
     ising = Ising(g, J, h, β)
     bp = BP(ising)
     f = zeros(N)
-    iterate_ms!(bp; maxiter=100, f)
+    iterate_ms!(bp; maxiter=20, f, tol=0)
     e = avg_energy(avg_energy_ms, bp)
     e_ex = exact_minimum_energy(bp)
     @test e ≈ e_ex

@@ -11,16 +11,18 @@ function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
     msg_sum(m1, m2) = m1 .+ m2
     hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    err = -Inf
     for ((_,_,id), dₐ) in zip(∂i, d)
         fᵢ₂ₐ = maximum(hnew[id])
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
         hnew[id] .-= fᵢ₂ₐ
+        err = max(err, mean(abs, hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
     fᵢ  = maximum(b[i])
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] .-= fᵢ
-    return nothing
+    return err
 end
 
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(bp.g));
@@ -38,13 +40,15 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(b
         end
     end
     dₐ = degree(g, factor(a))
+    err = -Inf
     for (i, _, id) in ∂a
         fₐ₂ᵢ = maximum(unew[id])
         f[i] -= fₐ₂ᵢ / dₐ
         unew[id] .-= fₐ₂ᵢ
+        err = max(err, mean(abs, unew[id] - u[id]))
         u[id] = damp!(u[id], unew[id], damp)
     end
-    return nothing
+    return err
 end
 
 beliefs_ms(bp) = bp.b
