@@ -20,6 +20,7 @@ end
 
 @testset "FactorGraphs" begin
     include("FactorGraphs/factorgraphs.jl")
+    include("FactorGraphs/generators.jl")
 end
 
 @testset "BeliefPropagation" begin

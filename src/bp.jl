@@ -34,8 +34,8 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
 end
 rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
 
-function refresh!(bp::BP)
-    (; g, u, h, b) = bp
+function reset!(bp::BP)
+    (; u, h, b) = bp
     for uai in u; uai .= 0; end
     for hia in h; hia .= 0; end
     for bi in b; bi .= 0; end
