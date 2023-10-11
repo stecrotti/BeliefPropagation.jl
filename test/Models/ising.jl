@@ -28,7 +28,7 @@ end
     J = randn(rng, ne(g))
     h = randn(rng, nv(g))
     β = rand(rng)
-    β = 100.0
+    β = 30.0
     ising = Ising(g, J, h, β)
     bp = BP(ising)
     f = zeros(N)
@@ -62,4 +62,5 @@ end
     e = avg_energy(avg_energy_ms, bp)
     e_ex = exact_minimum_energy(bp)
     @test e ≈ e_ex
+    @test e ≈ sum(f)
 end
