@@ -34,9 +34,16 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
 end
 rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
 
+function refresh!(bp::BP)
+    (; g, u, h, b) = bp
+    for uai in u; uai .= 0; end
+    for hia in h; hia .= 0; end
+    for bi in b; bi .= 0; end
+    return nothing
+end
+
 nstates(bp::BP, i::Integer) = length(bp.b[i])
 beliefs(f, bp::BP) = f(bp)
-beliefs_bp(bp::BP) = bp.b
 beliefs(bp::BP) = beliefs(beliefs_bp, bp)
 factor_beliefs(f, bp::BP) = f(bp)
 avg_energy(f, bp::BP) = f(bp)
@@ -53,7 +60,7 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     for it in 1:maxiter
         f .= 0
         for i in variables(bp.g)
-            update_variable!(bp, i, hnew, damp, rein, f; extra_kwargs...)
+            update_variable!(bp, i, hnew, damp, rein*it, f; extra_kwargs...)
         end
         for a in factors(bp.g)
             update_factor!(bp, a, unew, damp, f; extra_kwargs...)
@@ -83,7 +90,7 @@ function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
         f=zeros(nvariables(bp.g)); extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
-    ϕᵢ = [ϕ[i](x)^(1+rein) for x in 1:nstates(bp, i)]
+    ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
     hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
@@ -122,6 +129,8 @@ function update_f_bp!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(b
     end
     return nothing
 end
+
+beliefs_bp(bp::BP) = bp.b
 
 function factor_beliefs_bp(bp::BP)
     (; g, ψ, h) = bp

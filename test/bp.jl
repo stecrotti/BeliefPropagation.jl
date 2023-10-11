@@ -24,6 +24,24 @@ rng = MersenneTwister(0)
     f = zeros(nvar)
     iterate_ms!(bp; maxiter=10, f)
     bfe = bethe_free_energy_ms(bp)
-    # @test bfe ≈ sum(f)
+    @test bfe ≈ sum(f)
     @test bfe ≈ exact_minimum_energy(bp)
+end
+
+@testset "Reinforcement" begin
+    g = FactorGraph([0 1 1 0 0;
+                    1 0 0 0 0;
+                    0 0 1 1 0;
+                    0 0 0 0 0])
+    nfact, nvar = size(adjacency_matrix(g))
+    qs = rand(rng, 2:2, nvar)
+    bp = rand_bp(rng, g, qs)
+    iterate!(bp; maxiter=100, rein=0)
+    iterate!(bp; maxiter=100, rein=10)
+    b_bp = beliefs(bp)
+
+    refresh!(bp)
+    iterate_ms!(bp; maxiter=10)
+    b_ms = beliefs(bp)
+    @test all(argmax(bi1) == argmax(bi2) for (bi1, bi2) in zip(b_bp, b_ms))
 end
