@@ -3,26 +3,33 @@ function iterate_ms!(bp; kwargs...)
         kwargs...)
 end
 
-function update_v_ms!(bp::BP, i::Integer)
+function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
+        f=zeros(nvariables(bp.g)); extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i))
-    logϕᵢ = [log(ϕ[i](x)) for x in 1:nstates(bp, i)]
+    logϕᵢ = [(1+rein)*log(ϕ[i](x)) for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
-    h[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
-    for hᵢₐ in h[idx.(∂i)]
-        hᵢₐ .-= maximum(hᵢₐ)
+    hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
+    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    for ((_,_,id), dₐ) in zip(∂i, d)
+        fᵢ₂ₐ = maximum(hnew[id])
+        f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
+        hnew[id] .-= fᵢ₂ₐ
+        h[id] = damp!(h[id], hnew[id], damp)
     end
-    zᵢ = maximum(b[i])
-    b[i] .-= zᵢ
+    fᵢ  = maximum(b[i])
+    f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    b[i] .-= fᵢ
     return nothing
 end
 
-function update_f_ms!(bp::BP, a::Integer)
+function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(bp.g));
+        extra_kwargs...)
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))
     ψₐ = ψ[a]
     for ai in ∂a
-        u[idx(ai)] .= -Inf
+        unew[idx(ai)] .= -Inf
     end
     for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
         for (i, ai) in pairs(∂a)
@@ -30,8 +37,12 @@ function update_f_ms!(bp::BP, a::Integer)
                 sum(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=1.0))
         end
     end
-    for uₐᵢ in u[idx.(∂a)]
-        uₐᵢ .-= maximum(uₐᵢ)
+    dₐ = degree(g, factor(a))
+    for (i, _, id) in ∂a
+        fₐ₂ᵢ = maximum(unew[id])
+        f[i] -= fₐ₂ᵢ / dₐ
+        unew[id] .-= fₐ₂ᵢ
+        u[id] = damp!(u[id], unew[id], damp)
     end
     return nothing
 end
@@ -56,18 +67,18 @@ function avg_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     (; g, ψ, ϕ) = bp
     e = 0.0
     for a in factors(g)
-        ∂a = inedges(g, factor(a))
         bₐ = fb[a]
-        bmax = maximum(bₐ)
-        e -= mean(log(ψ[a](xₐ)) 
-            for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            if bₐ[xₐ...] == bmax
-        )
+        xmax = argmax(bₐ) |> Tuple
+        e -= log(ψ[a](xmax)) 
     end
     for i in variables(g)
         bᵢ = b[i]
-        bmax = maximum(bᵢ)
-        e -= mean(log(ϕ[i](xᵢ)) for xᵢ in eachindex(bᵢ) if bᵢ[xᵢ] == bmax)
+        xmax = argmax(bᵢ)
+        e -= log(ϕ[i](xmax))
     end
     return e
+end
+
+function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
+    return avg_energy_ms(bp; fb, b)
 end

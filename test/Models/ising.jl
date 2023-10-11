@@ -1,7 +1,7 @@
 @testset "Ising 2 spins" begin
     J = randn(1)
+    J = zeros(1)
     h = randn(2)
-    h = zeros(2)
     β = rand()
     g = IndexedGraph(path_graph(2))
     ising = Ising(g, J, h, β)
@@ -27,23 +27,25 @@ end
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
     J = randn(rng, ne(g))
     h = randn(rng, nv(g))
-    h = zeros(nv(g))
     β = rand(rng)
+    β = 100.0
     ising = Ising(g, J, h, β)
     bp = BP(ising)
-    iterate!(bp; maxiter=100)
+    f = zeros(N)
+    iterate!(bp; maxiter=100, f)
     b = beliefs(bp)
-    b_ex = exact_marginals(ising)
+    b_ex = exact_marginals(bp)
     @test b ≈ b_ex
     pb = factor_beliefs(bp)
-    pb_ex = exact_pair_marginals(ising)
+    pb_ex = exact_factor_marginals(bp)
     @test pb ≈ pb_ex
     e = avg_energy(bp)
-    e_ex = exact_avg_energy(ising) * β
+    e_ex = exact_avg_energy(bp)
     @test e ≈ e_ex
-    f = bethe_free_energy(bp)
-    z = exp(-f)
-    z_ex = exact_normalization(ising)
+    bfe = bethe_free_energy(bp)
+    z = exp(-bfe)
+    z_ex = exact_normalization(bp)
+    @test sum(f) ≈ bethe_free_energy(bp)
 end
 
 @testset "Ising random tree - maxsum" begin
@@ -55,8 +57,9 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
-    iterate_ms!(bp; maxiter=100)
+    f = zeros(N)
+    iterate_ms!(bp; maxiter=100, f)
     e = avg_energy(avg_energy_ms, bp)
-    e_ex = minimum_energy(ising) * β
+    e_ex = exact_minimum_energy(bp)
     @test e ≈ e_ex
 end

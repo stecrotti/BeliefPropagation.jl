@@ -5,6 +5,7 @@ using Graphs
 using IndexedGraphs
 using SparseArrays
 using Random
+using InvertedIndices
 
 using BeliefPropagation.FactorGraphs
 using BeliefPropagation.Models
