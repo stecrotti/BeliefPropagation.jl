@@ -35,16 +35,6 @@ struct Ising{F<:AbstractFloat}
     end
 end
 
-function Ising(J::AbstractMatrix{F}, h::Vector{F}, β::F) where {F<:AbstractFloat}
-    Jvec = [J[i,j] for j in axes(J,2) for i in axes(J,1) if i < j && J[i,j]!=0]
-    g = IndexedGraph(Symmetric(J, :L))
-    Ising(g, Jvec, h, β)
-end
-
-function Ising(g::IndexedGraph; J = ones(ne(g)), h = zeros(nv(g)), β = 1.0)
-    Ising(g, J, h, β)
-end
-
 function BeliefPropagation.BP(ising::Ising)
     g = pairwise_interaction_graph(ising.g)
     ψ = [IsingCoupling(ising.β * Jᵢⱼ) for Jᵢⱼ in ising.J]
