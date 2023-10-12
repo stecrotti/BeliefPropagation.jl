@@ -13,16 +13,16 @@ Fields
 - `h`: messages from variable to factor
 - `b`: beliefs
 """
-struct BP{F<:Vector{<:BPFactor}, FV<:Vector{<:BPFactor}, M, MB, G<:FactorGraph}
-    g :: G                  # graph
-    ψ :: F                  # factors
-    ϕ :: FV                 # vertex-dependent factors
-    u :: AtomicVector{M}    # messages factor -> variable
-    h :: AtomicVector{M}    # messages variable -> factor
-    b :: Vector{MB}         # beliefs
+struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
+    g :: G               # graph
+    ψ :: Vector{F}       # factors
+    ϕ :: Vector{FV}      # vertex-dependent factors
+    u :: AtomicVector{M}       # messages factor -> variable
+    h :: AtomicVector{M}       # messages variable -> factor
+    b :: Vector{MB}      # beliefs
 
-    function BP(g::G, ψ::F, ϕ::FV, u::Vector{M}, h::Vector{M}, b::Vector{MB}) where {
-        G<:FactorGraph, F<:Vector{<:BPFactor}, FV<:Vector{<:BPFactor}, M, MB}
+    function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, 
+        b::Vector{MB}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
 
         nvar = nvariables(g)
         nfact = nfactors(g)
@@ -65,9 +65,9 @@ Reset all messages and beliefs to zero
 """
 function reset!(bp::BP)
     (; u, h, b) = bp
-    for uai in u; uai .= 0; end
-    for hia in h; hia .= 0; end
-    for bi in b; bi .= 0; end
+    for uai in u; uai .= 1; end
+    for hia in h; hia .= 1; end
+    for bi in b; bi .= 1; end
     return nothing
 end
 
@@ -81,13 +81,14 @@ bethe_free_energy(f, bp::BP) = f(bp)
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
-        callback = (bp, ε, it) -> nothing,
+        callback = (bp, ε, it, f) -> nothing,
         extra_kwargs...
         )
     (; g, u, h) = bp
     unew = copy(u); hnew = copy(h)
     errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
     ff = AtomicVector(f)
+    ε = -Inf
     for it in 1:maxiter
         ff .= 0
         @threads for i in variables(bp.g)
@@ -97,13 +98,13 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
         ε = max(maximum(errv), maximum(errf))
-        callback(bp, ε, it)
-        ε < tol && return it
+        callback(bp, ε, it, f)
+        ε < tol && return it, ε
     end
-    return maxiter
+    return maxiter, ε
 end
 
-function damp(x::Real, xnew::Real, damp::Real)
+function damp!(x::Real, xnew::Real, damp::Real)
     0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
     damp == 0 && return xnew
     return xnew * (1-damp) + x * damp
@@ -120,8 +121,9 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
     return x
 end
 
-function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...)
+function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, damp::Real, rein::Real,
+        f::AtomicVector{<:Real}; extra_kwargs...) where {
+        F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -142,9 +144,9 @@ function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
     return err
 end
 
-function update_f_bp!(bp::BP, a::Integer, unew, damp::Real,
-        f::AtomicVector{<:Real};
-        extra_kwargs...)
+function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
+        f::AtomicVector{<:Real}; extra_kwargs...) where {
+            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))
     ψₐ = ψ[a]

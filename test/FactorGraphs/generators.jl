@@ -1,7 +1,7 @@
 ngraphs = 20
 ns = rand(5:50, ngraphs)
 ms = rand(5:50, ngraphs)
-es = rand(5:50, ngraphs)
+es = [rand(1:n*m) for (n, m) in zip(ns, ms)]
 
 @test all(zip(ns, ms, es)) do (n, m, e)
     g = rand_factor_graph(n, m, e)

@@ -7,7 +7,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i))
-    logϕᵢ = [(1+rein)*log(ϕ[i](x)) for x in 1:nstates(bp, i)]
+    logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
     hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))

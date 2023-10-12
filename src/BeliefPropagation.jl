@@ -25,6 +25,7 @@ export BPFactor, TabulatedBPFactor, rand_factor
 export FactorGraph, variables, factors, nvariables, nfactors
 export BP, reset!, nstates
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
+export damp!
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp
 export update_f_ms!, update_v_ms!, beliefs_ms, factor_beliefs_ms, iterate_ms!,
     avg_energy_ms, bethe_free_energy_ms
