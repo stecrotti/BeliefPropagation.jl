@@ -44,3 +44,20 @@ end
 function rand_factor_graph(nvar::Integer, nfact::Integer, p::Real)
     rand_factor_graph(GLOBAL_RNG, nvar, nfact, p)
 end
+
+function rand_regular_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, 
+        k::Integer)
+    nvar > 0 || throw(ArgumentError("Number of variable nodes must be positive, got $nvar"))
+    nfact > 0 || throw(ArgumentError("Number of factor nodes must be positive, got $nfact"))
+    k > 0 || throw(ArgumentError("Degree `k` must be positive, got $k"))
+    k ≤ nvar || throw(ArgumentError("Degree `k` must be smaller or equal than number of variables, got $k")) 
+
+    I = reduce(vcat, fill(a, k) for a in 1:nfact)
+    J = reduce(vcat, sample(rng, 1:nvar, k; replace=false) for _ in 1:nfact)
+    K = ones(Int, length(I))
+    A = sparse(I, J, K, nfact, nvar)
+    return FactorGraph(A)
+end
+function rand_regular_factor_graph(nvar::Integer, nfact::Integer, k::Integer)
+    rand_regular_factor_graph(GLOBAL_RNG, nvar, nfact, k)
+end

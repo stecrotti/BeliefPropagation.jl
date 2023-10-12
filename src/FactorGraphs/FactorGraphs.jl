@@ -10,6 +10,7 @@ using IndexedGraphs:
 using IndexedGraphs
 using SparseArrays: sparse, SparseMatrixCSC, nzrange
 using Random: AbstractRNG, GLOBAL_RNG
+using StatsBase: sample
 
 include("factorgraph.jl")
 include("generators.jl")
@@ -18,6 +19,6 @@ export FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
     pairwise_interaction_graph,
     neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree,
     adjacency_matrix
-export rand_factor_graph
+export rand_factor_graph, rand_regular_factor_graph
 
 end

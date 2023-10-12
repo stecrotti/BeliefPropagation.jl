@@ -19,7 +19,7 @@ include("testutils.jl")
 end
 
 @testset "FactorGraphs" begin
-    include("FactorGraphs/factorgraphs.jl")
+    include("FactorGraphs/factorgraph.jl")
     include("FactorGraphs/generators.jl")
 end
 
