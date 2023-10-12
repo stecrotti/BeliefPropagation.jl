@@ -10,7 +10,12 @@ using Random: AbstractRNG, GLOBAL_RNG
 
 using Statistics: mean
 
+using Lazy: @forward
+
+using Base.Threads: @threads, SpinLock
+
 include("bpfactor.jl")
+include("atomic_vector.jl")
 include("bp.jl")
 include("maxsum.jl")
 

@@ -4,7 +4,7 @@ function iterate_ms!(bp; kwargs...)
 end
 
 function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
-        f=zeros(nvariables(bp.g)); extra_kwargs...)
+        f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i))
     logϕᵢ = [(1+rein)*log(ϕ[i](x)) for x in 1:nstates(bp, i)]
@@ -25,7 +25,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
     return err
 end
 
-function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(bp.g));
+function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Real};
         extra_kwargs...)
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))

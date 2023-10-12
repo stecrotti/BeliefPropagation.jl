@@ -2,8 +2,8 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
     g :: G               # graph
     ψ :: Vector{F}       # factors
     ϕ :: Vector{FV}      # vertex-dependent factors
-    u :: Vector{M}       # messages factor -> variable
-    h :: Vector{M}       # messages variable -> factor
+    u :: AtomicVector{M}       # messages factor -> variable
+    h :: AtomicVector{M}       # messages variable -> factor
     b :: Vector{MB}      # beliefs
 
     function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, 
@@ -17,7 +17,7 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
         length(u) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `u`, $(length(u))"))
         length(h) == nedges || throw(DimensionMismatch("Number of edges in factor graph `g`, $nvar, does not match length of `h`, $(length(h))"))
         length(b) == nvar || throw(DimensionMismatch("Number of variable nodes in factor graph `g`, $nvar, does not match length of `b`, $(length(b))"))
-        new{F,FV,M,MB,G}(g, ψ, ϕ, u, h, b)
+        new{F,FV,M,MB,G}(g, ψ, ϕ, AtomicVector(u), AtomicVector(h), b)
     end
 end
 
@@ -58,13 +58,14 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     (; g, u, h) = bp
     unew = copy(u); hnew = copy(h)
     errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
+    ff = AtomicVector(f)
     for it in 1:maxiter
-        f .= 0
-        for i in variables(bp.g)
-            errv[i] = update_variable!(bp, i, hnew, damp, rein*it, f; extra_kwargs...)
+        ff .= 0
+        @threads for i in variables(bp.g)
+            errv[i] = update_variable!(bp, i, hnew, damp, rein*it, ff; extra_kwargs...)
         end
-        for a in factors(bp.g)
-            errf[a] = update_factor!(bp, a, unew, damp, f; extra_kwargs...)
+        @threads for a in factors(bp.g)
+            errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
         ε = max(maximum(errv), maximum(errf))
         callback(bp, ε, it)
@@ -91,7 +92,7 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
 end
 
 function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
-        f=zeros(nvariables(bp.g)); extra_kwargs...)
+        f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -112,7 +113,8 @@ function update_v_bp!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
     return err
 end
 
-function update_f_bp!(bp::BP, a::Integer, unew, damp::Real, f=zeros(nvariables(bp.g));
+function update_f_bp!(bp::BP, a::Integer, unew, damp::Real,
+        f::AtomicVector{<:Real};
         extra_kwargs...)
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))
