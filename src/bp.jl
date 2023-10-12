@@ -1,13 +1,28 @@
-struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
-    g :: G               # graph
-    ψ :: Vector{F}       # factors
-    ϕ :: Vector{FV}      # vertex-dependent factors
-    u :: AtomicVector{M}       # messages factor -> variable
-    h :: AtomicVector{M}       # messages variable -> factor
-    b :: Vector{MB}      # beliefs
+"""
+    BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
 
-    function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, 
-        b::Vector{MB}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
+A type representing the state of the Belief Propagation algorithm.
+
+Fields
+========
+
+- `g`: a [`FactorGraph`](@ref)
+- `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
+- `ϕ`: a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
+- `u`: messages from factor to variable
+- `h`: messages from variable to factor
+- `b`: beliefs
+"""
+struct BP{F<:Vector{<:BPFactor}, FV<:Vector{<:BPFactor}, M, MB, G<:FactorGraph}
+    g :: G                  # graph
+    ψ :: F                  # factors
+    ϕ :: FV                 # vertex-dependent factors
+    u :: AtomicVector{M}    # messages factor -> variable
+    h :: AtomicVector{M}    # messages variable -> factor
+    b :: Vector{MB}         # beliefs
+
+    function BP(g::G, ψ::F, ϕ::FV, u::Vector{M}, h::Vector{M}, b::Vector{MB}) where {
+        G<:FactorGraph, F<:Vector{<:BPFactor}, FV<:Vector{<:BPFactor}, M, MB}
 
         nvar = nvariables(g)
         nfact = nfactors(g)
@@ -21,19 +36,33 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
     end
 end
 
-function BP(g::FactorGraph, ψ, qs; ϕ = [UniformFactor(q) for q in qs])
-    u = [ones(qs[dst(e)]) for e in edges(g)]
-    h = [ones(qs[dst(e)]) for e in edges(g)]
-    b = [ones(qs[i]) for i in variables(g)]
+"""
+    BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, qs; ϕ)
+
+Constructor for the BP type.
+
+Arguments
+========
+
+- `g`: a [`FactorGraph`](@ref)
+- `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
+- `states`: an iterable of integers of length equal to the number of variable nodes specifyig the number of values each variable can take 
+- `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
+"""
+function BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states;
+        ϕ = [UniformFactor(q) for q in states])
+    length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
+    u = [ones(states[dst(e)]) for e in edges(g)]
+    h = [ones(states[dst(e)]) for e in edges(g)]
+    b = [ones(states[i]) for i in variables(g)]
     return BP(g, ψ, ϕ, u, h, b)
 end
 
-function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
-    ψ = [random_factor(rng, [qs[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
-    return BP(g, ψ, qs)  
-end
-rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
+"""
+    reset!(bp::BP)
 
+Reset all messages and beliefs to zero
+"""
 function reset!(bp::BP)
     (; u, h, b) = bp
     for uai in u; uai .= 0; end
