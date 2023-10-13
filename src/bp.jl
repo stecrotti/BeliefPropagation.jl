@@ -52,9 +52,9 @@ Arguments
 function BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states;
         ϕ = [UniformFactor(q) for q in states])
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
-    u = [ones(states[dst(e)]) for e in edges(g)]
-    h = [ones(states[dst(e)]) for e in edges(g)]
-    b = [ones(states[i]) for i in variables(g)]
+    u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
+    h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
+    b = [1/states[i]*ones(states[i]) for i in variables(g)]
     return BP(g, ψ, ϕ, u, h, b)
 end
 
@@ -65,9 +65,9 @@ Reset all messages and beliefs to zero
 """
 function reset!(bp::BP)
     (; u, h, b) = bp
-    for uai in u; uai .= 1; end
-    for hia in h; hia .= 1; end
-    for bi in b; bi .= 1; end
+    for uai in u; uai .= 1 / length(uai); end
+    for hia in h; hia .= 1 / length(hia); end
+    for bi in b; bi .= 1 / length(bi); end
     return nothing
 end
 

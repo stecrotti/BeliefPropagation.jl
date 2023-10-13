@@ -1,7 +1,7 @@
 """
     iterate_ms!(bp::BP; kwargs...)
 
-Runs the [max-sum](https://en.wikipedia.org/wiki/Belief_propagation#Related_algorithm_and_complexity_issues) algorithm. 
+Runs the max-sum algorithm (BP at zero temperature). 
 """
 function iterate_ms!(bp::BP; kwargs...) 
     return iterate!(bp; update_variable! = update_v_ms!, update_factor! = update_f_ms!,
@@ -56,7 +56,13 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Re
     return err
 end
 
-beliefs_ms(bp) = bp.b
+function beliefs_ms(bp::BP)
+    return map(bp.b) do hᵢ
+        bmax = maximum(hᵢ)
+        bᵢ = [hᵢx == bmax ? 1.0 : 0.0 for hᵢx in hᵢ]
+        bᵢ ./= sum(bᵢ)
+    end
+end
 
 function factor_beliefs_ms(bp::BP)
     (; g, ψ, h) = bp

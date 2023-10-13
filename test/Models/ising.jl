@@ -75,12 +75,10 @@ end
     bp = fast_ising_bp(ising)
     f = zeros(N)
     iterate!(bp; maxiter=50, f, tol=0)
-    iterate!(bp; maxiter=1, f, tol=0)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
     bp_slow = BP(ising)
     iterate!(bp_slow; maxiter=50, tol=0)
-    iterate!(bp_slow; maxiter=1, tol=0)
     b_slow = beliefs(bp_slow)
     fb_slow = factor_beliefs(bp_slow)
     @test b ≈ b_slow
@@ -101,4 +99,16 @@ end
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
     iterate!(bp; maxiter=10, tol=0.0)
     test_observables(bp)
+    bp_fast = fast_ising_bp(g, ψ; ϕ)
+    iterate!(bp_fast; maxiter=10, tol=0.0)
+    test_observables(bp_fast)
+
+    ms = bp
+    ms_fast = bp_fast
+    iterate_ms!(ms; maxiter=10, tol=0.0)
+    f = zeros(n)
+    iterate_ms!(ms_fast; maxiter=10, tol=0.0, f)
+    @test beliefs_ms(ms) ≈ beliefs_ms(ms_fast)
+    @test factor_beliefs_ms(ms) ≈ factor_beliefs_ms(ms_fast)
+    @test sum(f) ≈ bethe_free_energy_ms(ms_fast)
 end
