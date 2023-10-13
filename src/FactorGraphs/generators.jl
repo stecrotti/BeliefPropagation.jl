@@ -61,3 +61,14 @@ end
 function rand_regular_factor_graph(nvar::Integer, nfact::Integer, k::Integer)
     rand_regular_factor_graph(GLOBAL_RNG, nvar, nfact, k)
 end
+
+function rand_tree_factor_graph(rng::AbstractRNG, n::Integer)
+    gg = prufer_decode(rand(rng, 1:n, n-2))
+    A = BipartiteIndexedGraph(gg).A
+    if size(A, 1) < size(A, 2)
+        return FactorGraph(A)
+    else
+        return FactorGraph(permutedims(A))
+    end
+end
+rand_tree_factor_graph(n::Integer) = rand_tree_factor_graph(GLOBAL_RNG, n)

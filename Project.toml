@@ -5,6 +5,7 @@ version = "1.0.0-DEV"
 
 [deps]
 CavityTools = "217fe2f1-7e3d-419f-9934-cd6900c2759a"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 IndexedGraphs = "8a731c18-cfb7-4915-927e-cc26b56b67cd"
 InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 Lazy = "50d2b5c4-7a5e-59d5-8109-a42b560f39c0"
@@ -16,6 +17,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CavityTools = "0.2.2 - 1"
+Graphs = "1.9 - 1"
 IndexedGraphs = "0.4.1 - 1"
 InvertedIndices = "1.3 - 2"
 Lazy = "0.15 - 1"

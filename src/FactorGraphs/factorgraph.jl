@@ -42,6 +42,8 @@ function FactorGraph(A::AbstractMatrix)
 	FactorGraph(g)
 end
 
+FactorGraph(g::AbstractIndexedGraph) = FactorGraph(BipartiteIndexedGraph(g))
+
 """
     pairwise_interaction_graph(g::IndexedGraph)
 
@@ -210,3 +212,5 @@ function IndexedGraphs.degree(g::FactorGraph, i::Integer)
 end
 
 IndexedGraphs.adjacency_matrix(g::FactorGraph, T::DataType=Int) = g.g.A
+
+Graphs.is_cyclic(g::FactorGraph) = is_cyclic(g.g)

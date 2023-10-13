@@ -55,3 +55,9 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
     return BP(g, ψ, qs)  
 end
 rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
+
+function test_observables(bp::BP; kwargs...)
+    @test isapprox(beliefs(bp), exact_marginals(bp); kwargs...)
+    @test isapprox(factor_beliefs(bp), exact_factor_marginals(bp); kwargs...)
+    @test isapprox(exp(-bethe_free_energy(bp)), exact_normalization(bp))
+end

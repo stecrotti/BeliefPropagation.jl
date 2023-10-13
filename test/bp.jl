@@ -33,7 +33,7 @@ end
                     1 0 0 0 0;
                     0 0 1 1 0;
                     0 0 0 0 0])
-    qs = rand(rng, 2:2, nvariables(g))
+    qs = rand(rng, 2:4, nvariables(g))
     bp = rand_bp(rng, g, qs)
     iterate!(bp; maxiter=50, rein=0, tol=0)
     iterate!(bp; maxiter=50, rein=10, tol=0)
@@ -43,4 +43,14 @@ end
     iterate_ms!(bp; maxiter=10)
     b_ms = beliefs(bp)
     @test all(argmax(bi1) == argmax(bi2) for (bi1, bi2) in zip(b_bp, b_ms))
+end
+
+@testset "On a tree" begin
+    n = 10
+    g = rand_tree_factor_graph(n)
+    qs = rand(rng, 2:4, nvariables(g))
+    bp = rand_bp(rng, g, qs)
+    iterate!(bp; maxiter=100, tol=0.0)
+    b = beliefs(bp)
+    test_observables(bp)
 end
