@@ -71,13 +71,140 @@ function reset!(bp::BP)
     return nothing
 end
 
-nstates(bp::BP, i::Integer) = length(bp.b[i])
-beliefs(f, bp::BP) = f(bp)
-beliefs(bp::BP) = beliefs(beliefs_bp, bp)
-factor_beliefs(f, bp::BP) = f(bp)
-avg_energy(f, bp::BP) = f(bp)
-bethe_free_energy(f, bp::BP) = f(bp)
+"""
+    nstates(bp::BP, i::Integer)
 
+Return the number of values taken by variable `i`.
+"""
+nstates(bp::BP, i::Integer) = length(bp.b[i])
+
+"""
+    beliefs([f], bp::BP)
+
+Return single-variable beliefs {bᵢ(xᵢ)}ᵢ.
+"""
+beliefs(f, bp::BP) = f(bp)
+
+"""
+    factor_beliefs([f], bp::BP)
+
+Return factor beliefs {bₐ(xₐ)}ₐ.
+"""
+factor_beliefs(f, bp::BP) = f(bp)
+
+"""
+    avg_energy([f], bp::BP)
+
+Return the average energy ∑ₐ∑ₓₐbₐ(xₐ)[-logψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)[-logϕᵢ(xᵢ)]
+"""
+avg_energy(f, bp::BP; kwargs...) = f(bp; kwargs...)
+
+"""
+    bethe_free_energy([f], bp::BP)
+
+Return the bethe free energy ∑ₐ∑ₓₐbₐ(xₐ)log[bₐ(xₐ)/ψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)log[bᵢ(xᵢ)^(1-|∂i|)/ϕᵢ(xᵢ)]
+"""
+bethe_free_energy(f, bp::BP; kwargs...) = f(bp; kwargs...)
+
+beliefs_bp(bp::BP) = bp.b
+beliefs(bp::BP) = beliefs(beliefs_bp, bp)
+
+function factor_beliefs_bp(bp::BP)
+    (; g, ψ, h) = bp
+    return map(factors(g)) do a
+        ∂a = inedges(g, factor(a))
+        ψₐ = ψ[a]
+        bₐ = zeros((nstates(bp, src(ia)) for ia in ∂a)...)
+        for xₐ in keys(bₐ)
+            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
+        end
+        zₐ = sum(bₐ)
+        bₐ ./= zₐ
+        bₐ
+    end
+end
+factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
+
+function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
+    (; g, ψ, ϕ) = bp
+    e = 0.0
+    for a in factors(g)
+        ∂a = inedges(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
+            e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
+        end
+    end
+    for i in variables(g)
+        for xᵢ in eachindex(b[i])
+            e += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
+        end
+    end
+    return e
+end
+avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
+
+function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
+    (; g, ψ, ϕ) = bp
+    f = 0.0
+    for a in factors(g)
+        ∂a = inedges(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
+            f += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
+        end
+    end
+    for i in variables(g)
+        dᵢ = degree(g, variable(i))
+        for xᵢ in eachindex(b[i])
+            f += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
+        end
+    end
+    return f
+end
+bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
+
+"""
+    energy(bp::BP, x)
+
+Return the energy ∑ₐ[-logψₐ(xₐ)] + ∑ᵢ[-logϕᵢ(xᵢ)] of configuration `x`.
+"""
+function energy(bp::BP, x)
+    (; g, ψ, ϕ) = bp
+    w = 0.0
+    for a in factors(g)
+        ∂a = neighbors(g, factor(a))
+        w += -log(ψ[a](x[∂a]))
+    end
+    for i in variables(g)
+        w += -log(ϕ[i](x[i]))
+    end
+    return w
+end
+
+"""
+    evaluate(bp::BP, x)
+
+Return the unnormalized probability ∏ₐψₐ(xₐ)∏ᵢϕᵢ(xᵢ) of configuration `x`.
+"""
+evaluate(bp::BP, x) = exp(-energy(bp, x))
+
+"""
+    iterate!(bp::BP; kwargs...)
+
+Run BP.
+
+Optional arguments
+=================
+
+- `update_variable!`: the function that computes and updates variable-to-factor messages
+- `update_factor!`: the function that computes and updates factor-to-variable messages
+- `maxiter`: maximum number of iterations
+- `tol`: convergence check parameter
+- `damp`: damping parameter
+- `rein`: reinforcement parameter
+- `f`: a vector to store on-the-fly computations of the bethe free energy
+- `callback`
+- extra arguments to be passed to custom `update_variable!` and `update_factor!`
+"""
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
@@ -170,58 +297,3 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     end
     return err
 end
-
-beliefs_bp(bp::BP) = bp.b
-
-function factor_beliefs_bp(bp::BP)
-    (; g, ψ, h) = bp
-    return map(factors(g)) do a
-        ∂a = inedges(g, factor(a))
-        ψₐ = ψ[a]
-        bₐ = zeros((nstates(bp, src(ia)) for ia in ∂a)...)
-        for xₐ in keys(bₐ)
-            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
-        end
-        zₐ = sum(bₐ)
-        bₐ ./= zₐ
-        bₐ
-    end
-end
-factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
-
-function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
-    (; g, ψ, ϕ) = bp
-    e = 0.0
-    for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
-        end
-    end
-    for i in variables(g)
-        for xᵢ in eachindex(b[i])
-            e += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
-        end
-    end
-    return e
-end
-avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
-
-function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
-    (; g, ψ, ϕ) = bp
-    f = 0.0
-    for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            f += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
-        end
-    end
-    for i in variables(g)
-        dᵢ = degree(g, variable(i))
-        for xᵢ in eachindex(b[i])
-            f += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
-        end
-    end
-    return f
-end
-bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)

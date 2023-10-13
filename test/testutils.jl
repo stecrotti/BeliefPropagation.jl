@@ -1,18 +1,8 @@
-function energy(bp::BP, x)
-    (; g, ψ, ϕ) = bp
-    w = 0.0
-    for a in factors(g)
-        ∂a = neighbors(g, factor(a))
-        w += -log(ψ[a](x[∂a]))
-    end
-    for i in variables(g)
-        w += -log(ϕ[i](x[i]))
-    end
-    return w
-end
+"""
+    eachstate(bp::BP)
 
-evaluate(bp::BP, x) = exp(-energy(bp, x))
-
+Return a lazy iterator to the joint configuration of all variables.
+"""
 function eachstate(bp::BP)
     return Iterators.product((1:nstates(bp, i) for i in variables(bp.g))...)
 end
@@ -54,7 +44,7 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
     ψ = [rand_factor(rng, [qs[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
     return BP(g, ψ, qs)  
 end
-rand_bp(g::FactorGraph, qs) = rand_bp(GLOBAL_RNG, g, qs)
+rand_bp(g::FactorGraph, qs) = rand_bp(default_rng(), g, qs)
 
 function test_observables(bp::BP; kwargs...)
     @test isapprox(beliefs(bp), exact_marginals(bp); kwargs...)

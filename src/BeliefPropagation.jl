@@ -2,16 +2,12 @@ module BeliefPropagation
 
 include("FactorGraphs/FactorGraphs.jl")
 
-using .FactorGraphs
-
+using .FactorGraphs: FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
+    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree
 using CavityTools: cavity 
-
-using Random: AbstractRNG, GLOBAL_RNG
-
+using Random: AbstractRNG, default_rng
 using Statistics: mean
-
 using Lazy: @forward
-
 using Base.Threads: @threads, SpinLock
 
 include("bpfactor.jl")
@@ -23,7 +19,7 @@ include("Models/Models.jl")
 
 export BPFactor, TabulatedBPFactor, rand_factor
 export FactorGraph, variables, factors, nvariables, nfactors
-export BP, reset!, nstates
+export BP, reset!, nstates, evaluate, energy
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
 export damp!
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp

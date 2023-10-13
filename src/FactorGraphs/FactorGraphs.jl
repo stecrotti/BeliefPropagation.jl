@@ -12,7 +12,7 @@ using Graphs: is_cyclic, prufer_decode
 using Graphs
 
 using SparseArrays: sparse, SparseMatrixCSC, nzrange
-using Random: AbstractRNG, GLOBAL_RNG
+using Random: AbstractRNG, default_rng
 using StatsBase: sample
 
 include("factorgraph.jl")

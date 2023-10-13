@@ -69,4 +69,4 @@ function rand_factor(rng::AbstractRNG, states)
     values = rand(rng, states...)
     return TabulatedBPFactor(values)
 end
-rand_factor(states) = rand_factor(GLOBAL_RNG, states)
+rand_factor(states) = rand_factor(default_rng(), states)

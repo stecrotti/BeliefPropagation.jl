@@ -90,3 +90,15 @@ end
     @test bfe ≈ bfe_slow
     @test sum(f) ≈ bfe
 end
+
+@testset "pspin random tree" begin
+    n = 10
+    g = rand_tree_factor_graph(n)
+    J = randn(nfactors(g))
+    h = randn(nvariables(g))
+    ψ = IsingCoupling.(J)
+    ϕ = IsingField.(h)
+    bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
+    iterate!(bp; maxiter=10, tol=0.0)
+    test_observables(bp)
+end

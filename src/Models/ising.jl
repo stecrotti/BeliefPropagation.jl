@@ -1,5 +1,4 @@
 potts2spin(x) = 3 - 2x
-# spin2potts(σ) = (3-σ)/2
 
 struct IsingCoupling{T<:Real}  <: BPFactor 
     βJ :: T 
@@ -7,7 +6,6 @@ end
 
 function (f::IsingCoupling)(x)
     (; βJ) = f
-    @assert length(x) == 2
     return exp(βJ * prod(potts2spin(xᵢ) for xᵢ in x))
 end
 
@@ -118,3 +116,24 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
         bₐ
     end
 end
+
+# function BeliefPropagation.update_v_ms!(bp::BPIsing,
+#         i::Integer, hnew, damp::Real, rein::Real,
+#         f::AtomicVector{<:Real}; extra_kwargs...)
+#     (; g, ϕ, u, h, b) = bp
+#     ∂i = outedges(g, variable(i)) 
+#     hᵢ = ϕ[i].βh + b[i]*rein
+#     hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], +, hᵢ)
+#     cout, cfull = cavity(2cosh.(u[idx.(∂i)]), *, 1.0)
+#     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+#     err = -Inf
+#     for ((_,_,id), dₐ, c) in zip(∂i, d, cout)
+#         zᵢ₂ₐ = 2cosh(hnew[id]) / c
+#         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
+#         err = max(err, abs(hnew[id] - h[id]))
+#         h[id] = damp!(h[id], hnew[id], damp)
+#     end
+#     zᵢ = 2cosh(b[i]) / cfull
+#     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+#     return err
+# end

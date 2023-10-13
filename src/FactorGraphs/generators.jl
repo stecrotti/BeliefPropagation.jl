@@ -1,4 +1,8 @@
-# takes O(|E|^2), could be probably brought down to O(|E|)
+"""
+    rand_factor_graph([rng=default_rng()], nvar, nfact, ned)
+
+Create a factor graph with `nvar` variables, `nfact` factors and `ned` edges taken uniformly at random.
+"""
 function rand_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, ned::Integer)
     nvar > 0 || throw(ArgumentError("Number of variable nodes must be positive, got $nvar"))
     nfact > 0 || throw(ArgumentError("Number of factor nodes must be positive, got $nfact"))
@@ -21,9 +25,14 @@ function rand_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, ned:
     return FactorGraph(A)
 end
 function rand_factor_graph(nvar::Integer, nfact::Integer, ned::Integer)
-    rand_factor_graph(GLOBAL_RNG, nvar, nfact, ned)
+    rand_factor_graph(default_rng(), nvar, nfact, ned)
 end
 
+"""
+    rand_factor_graph([rng=default_rng()], nvar, nfact, p)
+
+Create a factor graph with `nvar` variables, `nfact` factors and edges taken independently with probability `p`.
+"""
 function rand_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, p::Real)
     nvar > 0 || throw(ArgumentError("Number of variable nodes must be positive, got $nvar"))
     nfact > 0 || throw(ArgumentError("Number of factor nodes must be positive, got $nfact"))
@@ -42,9 +51,14 @@ function rand_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, p::R
     return FactorGraph(A)
 end
 function rand_factor_graph(nvar::Integer, nfact::Integer, p::Real)
-    rand_factor_graph(GLOBAL_RNG, nvar, nfact, p)
+    rand_factor_graph(default_rng(), nvar, nfact, p)
 end
 
+"""
+    rand_regular_factor_graph([rng=default_rng()], nvar, nfact, k)
+
+Create a factor graph with `nvar` variables and `nfact` factors, where all factors have degree `k`.
+"""
 function rand_regular_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integer, 
         k::Integer)
     nvar > 0 || throw(ArgumentError("Number of variable nodes must be positive, got $nvar"))
@@ -59,16 +73,17 @@ function rand_regular_factor_graph(rng::AbstractRNG, nvar::Integer, nfact::Integ
     return FactorGraph(A)
 end
 function rand_regular_factor_graph(nvar::Integer, nfact::Integer, k::Integer)
-    rand_regular_factor_graph(GLOBAL_RNG, nvar, nfact, k)
+    rand_regular_factor_graph(default_rng(), nvar, nfact, k)
 end
 
+"""
+    rand_tree_factor_graph([rng=default_rng()], n)
+
+Create a tree factor graph with `n` vertices in total. The proportion of variables/factors is casual.
+"""
 function rand_tree_factor_graph(rng::AbstractRNG, n::Integer)
     gg = prufer_decode(rand(rng, 1:n, n-2))
-    A = BipartiteIndexedGraph(gg).A
-    if size(A, 1) < size(A, 2)
-        return FactorGraph(A)
-    else
-        return FactorGraph(permutedims(A))
-    end
+    g = BipartiteIndexedGraph(gg)
+    return FactorGraph(g)
 end
-rand_tree_factor_graph(n::Integer) = rand_tree_factor_graph(GLOBAL_RNG, n)
+rand_tree_factor_graph(n::Integer) = rand_tree_factor_graph(default_rng(), n)

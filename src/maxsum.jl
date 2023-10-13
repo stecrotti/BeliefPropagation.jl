@@ -1,4 +1,9 @@
-function iterate_ms!(bp; kwargs...) 
+"""
+    iterate_ms!(bp::BP; kwargs...)
+
+Runs the [max-sum](https://en.wikipedia.org/wiki/Belief_propagation#Related_algorithm_and_complexity_issues) algorithm. 
+"""
+function iterate_ms!(bp::BP; kwargs...) 
     return iterate!(bp; update_variable! = update_v_ms!, update_factor! = update_f_ms!,
         kwargs...)
 end
