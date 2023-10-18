@@ -99,7 +99,7 @@ end
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
     iterate!(bp; maxiter=10, tol=0.0)
     test_observables(bp)
-    bp_fast = fast_ising_bp(g, ψ; ϕ)
+    bp_fast = fast_ising_bp(g, ψ, ϕ)
     iterate!(bp_fast; maxiter=10, tol=0.0)
     test_observables(bp_fast)
 

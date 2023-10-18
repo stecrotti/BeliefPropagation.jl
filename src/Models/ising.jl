@@ -25,7 +25,7 @@ struct Ising{T<:Real}
     h :: Vector{T}
     β :: T
 
-    function Ising(g::IndexedGraph{Int}, J::Vector{T}, h::Vector{T}, β::T) where {T<:Real}
+    function Ising(g::IndexedGraph{Int}, J::Vector{T}, h::Vector{T}, β::T=1.0) where {T<:Real}
         @assert length(J) == ne(g)
         @assert length(h) == nv(g)
         @assert β ≥ 0
@@ -33,7 +33,7 @@ struct Ising{T<:Real}
     end
 end
 
-function Ising(J::AbstractMatrix{F}, h::Vector{F}, β::F) where {F<:AbstractFloat}
+function Ising(J::AbstractMatrix{<:Real}, h::Vector{<:Real}, β::Real=1.0)
     Jvec = [J[i,j] for j in axes(J,2) for i in axes(J,1) if i < j && J[i,j]!=0]
     g = IndexedGraph(Symmetric(J, :L))
     Ising(g, Jvec, h, β)
@@ -47,7 +47,7 @@ function BeliefPropagation.BP(ising::Ising)
     return BP(g, ψ, qs; ϕ)
 end
 
-function fast_ising_bp(g::FactorGraph, ψ::Vector{<:IsingCoupling};
+function fast_ising_bp(g::FactorGraph, ψ::Vector{<:IsingCoupling},
         ϕ::Vector{<:IsingField}=fill(IsingField(0.0), nvariables(g)))
     u = zeros(ne(g))
     h = zeros(ne(g))
@@ -59,7 +59,7 @@ function fast_ising_bp(ising::Ising)
     g = pairwise_interaction_graph(ising.g)
     ψ = [IsingCoupling(ising.β * Jᵢⱼ) for Jᵢⱼ in ising.J]
     ϕ = [IsingField(ising.β * hᵢ) for hᵢ in ising.h]
-    return fast_ising_bp(g, ψ; ϕ)
+    return fast_ising_bp(g, ψ, ϕ)
 end
 
 const BPIsing = BP{<:IsingCoupling, <:IsingField, <:Real, <:Real}
@@ -154,7 +154,7 @@ function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
     (; g, ψ, u, h) = bp
     ∂a = inedges(g, factor(a))
     Jₐ = ψ[a].βJ
-    unew[idx.(∂a)], = cavity(abs.(h[idx.(∂a)]), min, abs(Jₐ)) 
+    unew[idx.(∂a)], = cavity(abs.(h[idx.(∂a)]), min, convert(eltype(h), abs(Jₐ))) 
     signs, = cavity(sign.(h[idx.(∂a)]), *, sign(Jₐ))
     dₐ = degree(g, factor(a))
     err = -Inf
