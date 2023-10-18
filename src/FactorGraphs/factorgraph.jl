@@ -28,7 +28,7 @@ variable(i::Integer) = vertex(i, Variable)
 
 A type representing a [factor graph](https://en.wikipedia.org/wiki/Factor_graph).
 """
-struct FactorGraph{T}
+struct FactorGraph{T} <: AbstractFactorGraph{T}
     g :: BipartiteIndexedGraph{T}
 end
 """

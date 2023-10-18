@@ -4,6 +4,7 @@ using Aqua
 using Graphs
 using IndexedGraphs
 using SparseArrays
+using Random: default_rng
 using Random
 using InvertedIndices
 
@@ -21,6 +22,7 @@ end
 @testset "FactorGraphs" begin
     include("FactorGraphs/factorgraph.jl")
     include("FactorGraphs/generators.jl")
+    include("FactorGraphs/regular_factorgraph.jl")
 end
 
 @testset "BeliefPropagation" begin

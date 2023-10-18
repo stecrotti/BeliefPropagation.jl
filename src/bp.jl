@@ -13,16 +13,16 @@ Fields
 - `h`: messages from variable to factor
 - `b`: beliefs
 """
-struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
-    g :: G               # graph
-    ψ :: Vector{F}       # factors
-    ϕ :: Vector{FV}      # vertex-dependent factors
-    u :: AtomicVector{M}       # messages factor -> variable
-    h :: AtomicVector{M}       # messages variable -> factor
-    b :: Vector{MB}      # beliefs
+struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:AbstractFactorGraph}
+    g :: G
+    ψ :: Vector{F}
+    ϕ :: Vector{FV}
+    u :: AtomicVector{M}
+    h :: AtomicVector{M}
+    b :: Vector{MB}
 
     function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, 
-        b::Vector{MB}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
+        b::Vector{MB}) where {G<:AbstractFactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
 
         nvar = nvariables(g)
         nfact = nfactors(g)
@@ -49,8 +49,8 @@ Arguments
 - `states`: an iterable of integers of length equal to the number of variable nodes specifyig the number of values each variable can take 
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 """
-function BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states;
-        ϕ = [UniformFactor(q) for q in states])
+function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
+        ϕ = [UniformFactor(states[i]) for i in eachindex(states)])
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
     u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
