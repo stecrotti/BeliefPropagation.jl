@@ -45,7 +45,7 @@ end
     @test all(argmax(bi1) == argmax(bi2) for (bi1, bi2) in zip(b_bp, b_ms))
 end
 
-@testset "On a tree" begin
+@testset "Tree factor graph" begin
     n = 10
     g = rand_tree_factor_graph(n)
     qs = rand(rng, 2:4, nvariables(g))

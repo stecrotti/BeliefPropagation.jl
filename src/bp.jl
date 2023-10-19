@@ -58,6 +58,9 @@ function BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states;
     return BP(g, ψ, ϕ, u, h, b)
 end
 
+# treat a BP object as a scalar in broadcasting
+Base.broadcastable(b::BP) = Ref(b)
+
 """
     reset!(bp::BP)
 
@@ -187,6 +190,18 @@ Return the unnormalized probability ∏ₐψₐ(xₐ)∏ᵢϕᵢ(xᵢ) of config
 """
 evaluate(bp::BP, x) = exp(-energy(bp, x))
 
+
+abstract type ConvergenceChecker end
+
+struct MessageConvergence{T<:Real} <: ConvergenceChecker
+    tol :: T
+end
+msg_convergence(tol::Real) = MessageConvergence(tol)
+
+function (check_convergence::MessageConvergence)(bp::BP, errv, errf)
+    max(maximum(errv), maximum(errf)) < check_convergence.tol
+end
+
 """
     iterate!(bp::BP; kwargs...)
 
@@ -203,19 +218,20 @@ Optional arguments
 - `rein`: reinforcement parameter
 - `f`: a vector to store on-the-fly computations of the bethe free energy
 - `callback`
+- `check_convergence`: a function that checks if convergence has been reached
 - extra arguments to be passed to custom `update_variable!` and `update_factor!`
 """
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
-        callback = (bp, ε, it, f) -> nothing,
+        callback = (bp, errv, errf, it, f) -> nothing,
+        check_convergence=msg_convergence(tol),
         extra_kwargs...
         )
     (; g, u, h) = bp
     unew = copy(u); hnew = copy(h)
     errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
     ff = AtomicVector(f)
-    ε = -Inf
     for it in 1:maxiter
         ff .= 0
         @threads for i in variables(bp.g)
@@ -224,11 +240,10 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
-        ε = max(maximum(errv), maximum(errf))
-        callback(bp, ε, it, f)
-        ε < tol && return it, ε
+        callback(bp, errv, errf, it, f)
+        check_convergence(bp, errv, errf) && return it
     end
-    return maxiter, ε
+    return maxiter
 end
 
 function damp!(x::Real, xnew::Real, damp::Real)
