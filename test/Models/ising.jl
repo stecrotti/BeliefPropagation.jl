@@ -97,11 +97,13 @@ end
     ψ = IsingCoupling.(J)
     ϕ = IsingField.(h)
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
-    iterate!(bp; maxiter=10, tol=0.0)
+    f = zeros(n)
+    iterate!(bp; maxiter=10, tol=0.0, f)
     test_observables(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
     iterate!(bp_fast; maxiter=10, tol=0.0)
     test_observables(bp_fast)
+    @test sum(f) ≈ bethe_free_energy(bp)
 
     ms = bp
     ms_fast = bp_fast
