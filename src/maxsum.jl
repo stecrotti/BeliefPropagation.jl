@@ -25,11 +25,11 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
         errv = max(errv, mean(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = mean(abs, bnew[i] - b[i])
     fᵢ  = maximum(bnew[i])
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    bnew[i] .-= fᵢ
+    errb = mean(abs, bnew[i] - b[i])
     b[i] = bnew[i]
-    b[i] .-= fᵢ
     return errv, errb
 end
 

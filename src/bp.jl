@@ -243,11 +243,11 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     ff = AtomicVector(f)
     for it in 1:maxiter
         ff .= 0
-        @threads for i in variables(bp.g)
-            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, ff; extra_kwargs...)
-        end
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
+        end
+        @threads for i in variables(bp.g)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, ff; extra_kwargs...)
         end
         callback(bp, errv, errf, errb, it, f)
         check_convergence(bp, errv, errf, errb) && return it
@@ -290,11 +290,11 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
         errv = max(errv, mean(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = mean(abs, bnew[i] - b[i])
     zᵢ = sum(bnew[i])
+    bnew[i] ./= zᵢ
+    errb = mean(abs, bnew[i] - b[i])
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] = bnew[i]
-    b[i] ./= zᵢ
     return errv, errb
 end
 
