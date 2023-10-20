@@ -130,19 +130,20 @@ factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
 
 function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
-    e = 0.0
+    eₐ = eᵢ = 0.0
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
         for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-            e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
+            eₐ += -log(ψ[a](xₐ)) * fb[a][xₐ...]
         end
     end
+    eₐ *= _free_energy_correction(bp)
     for i in variables(g)
         for xᵢ in eachindex(b[i])
-            e += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
+            eᵢ += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
         end
     end
-    return e
+    return eₐ + eᵢ
 end
 avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 
@@ -245,7 +246,7 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
         extra_kwargs...
         )
     (; g, u, h, b) = bp
-    unew = copy(u); hnew = copy(h); bnew = copy(b)
+    unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
     errv = zeros(nvariables(g)); errf = zeros(nfactors(g)); errb = zeros(nvariables(g))
     ff = AtomicVector(f)
     for it in 1:maxiter

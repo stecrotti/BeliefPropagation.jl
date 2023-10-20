@@ -66,6 +66,14 @@ const BPIsing = BP{<:IsingCoupling, <:IsingField, <:Real, <:Real}
 
 BeliefPropagation.nstates(bp::BPIsing, ::Integer) = 2
 
+function BeliefPropagation.reset!(bp::BPIsing)
+    (; u, h, b) = bp
+    u .= 0
+    h .= 0
+    b .= 0
+    return nothing
+end
+
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
@@ -97,11 +105,11 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
     @views cavity!(unew[ea], tanh.(h[ea]), *, 1.0)
+    unew[ea] .= atanh.(tanh(Jₐ).*unew[ea])
     dₐ = degree(g, factor(a))
     err = -Inf
     for (i, ai) in zip(∂a, ea)
         zₐ₂ᵢ = 2cosh(Jₐ)
-        unew[ai] = atanh(tanh(Jₐ)*unew[ai])
         f[i] -= log(zₐ₂ᵢ) / dₐ
         err = max(err, abs(unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
@@ -133,20 +141,21 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
 end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
-        i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...)
+    i::Integer, hnew, bnew, damp::Real, rein::Real,
+    f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ∂i = outedges(g, variable(i)) 
+    ei = edge_indices(g, variable(i)) 
+    ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
-    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
-    cout, cfull = cavity(abs.(u[idx.(∂i)]), +, 0.0)
-    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
+    cout, cfull = cavity(abs.(u[ei]), +, 0.0)
+    d = (degree(g, factor(a)) for a in ∂i)
     errv = -Inf
-    for ((_,_,id), dₐ, c) in zip(∂i, d, cout)
-        fᵢ₂ₐ = abs(hnew[id]) - c
+    for (ia, dₐ, c) in zip(ei, d, cout)
+        fᵢ₂ₐ = abs(hnew[ia]) - c
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
-        errv = max(errv, abs(hnew[id] - h[id]))
-        h[id] = damp!(h[id], hnew[id], damp)
+        errv = max(errv, abs(hnew[ia] - h[ia]))
+        h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     errb = abs(bnew[i] - b[i])
     fᵢ = abs(bnew[i]) - cfull
@@ -158,18 +167,19 @@ end
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
         unew, damp::Real, f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = inedges(g, factor(a))
+    ∂a = neighbors(g, factor(a))
+    ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    unew[idx.(∂a)], = cavity(abs.(h[idx.(∂a)]), min, convert(eltype(h), abs(Jₐ))) 
-    signs, = cavity(sign.(h[idx.(∂a)]), *, sign(Jₐ))
+    @views cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
+    signs, = cavity(sign.(h[ea]), *, sign(Jₐ))
+    unew[ea] .= signs .* unew[ea]
     dₐ = degree(g, factor(a))
     err = -Inf
-    for ((i, _, id), s) in zip(∂a, signs)
+    for (i, ai, s) in zip(∂a, ea, signs)
         fₐ₂ᵢ = abs(Jₐ)
-        unew[id] = s * unew[id]
         f[i] -= fₐ₂ᵢ / dₐ
-        err = max(err, abs(unew[id] - u[id]))
-        u[id] = damp!(u[id], unew[id], damp)
+        err = max(err, abs(unew[ai] - u[ai]))
+        u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
 end

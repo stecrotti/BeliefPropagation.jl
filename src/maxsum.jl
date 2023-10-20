@@ -85,18 +85,19 @@ end
 
 function avg_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     (; g, ψ, ϕ) = bp
-    e = 0.0
+    eₐ = eᵢ = 0.0
     for a in factors(g)
         bₐ = fb[a]
         xmax = argmax(bₐ) |> Tuple
-        e -= log(ψ[a](xmax)) 
+        eₐ -= log(ψ[a](xmax)) 
     end
+    eₐ *= _free_energy_correction(bp)
     for i in variables(g)
         bᵢ = b[i]
         xmax = argmax(bᵢ)
-        e -= log(ϕ[i](xmax))
+        eᵢ -= log(ϕ[i](xmax))
     end
-    return e
+    return eₐ + eᵢ
 end
 
 function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
