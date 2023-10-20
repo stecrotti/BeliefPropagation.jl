@@ -70,17 +70,19 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ∂i = outedges(g, variable(i)) 
+    ei = edge_indices(g, variable(i)) 
+    ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
-    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
-    cout, cfull = cavity(2cosh.(u[idx.(∂i)]), *, 1.0)
-    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    # hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
+    cout, cfull = cavity(2cosh.(u[ei]), *, 1.0)
+    d = (degree(g, factor(a)) for a in ∂i)
     errv = -Inf
-    for ((_,_,id), dₐ, c) in zip(∂i, d, cout)
-        zᵢ₂ₐ = 2cosh(hnew[id]) / c
+    for (ia, dₐ, c) in zip(ei, d, cout)
+        zᵢ₂ₐ = 2cosh(hnew[ia]) / c
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
-        errv = max(errv, abs(hnew[id] - h[id]))
-        h[id] = damp!(h[id], hnew[id], damp)
+        errv = max(errv, abs(hnew[ia] - h[ia]))
+        h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     errb = abs(bnew[i] - b[i])
     zᵢ = 2cosh(bnew[i]) / cfull
@@ -92,17 +94,18 @@ end
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
         unew, damp::Real, f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = inedges(g, factor(a))
+    ∂a = neighbors(g, factor(a))
+    ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    unew[idx.(∂a)], = cavity(tanh.(h[idx.(∂a)]), *, 1.0) 
+    @views cavity!(unew[ea], tanh.(h[ea]), *, 1.0)
     dₐ = degree(g, factor(a))
     err = -Inf
-    for (i, _, id) in ∂a
+    for (i, ai) in zip(∂a, ea)
         zₐ₂ᵢ = 2cosh(Jₐ)
-        unew[id] = atanh(tanh(Jₐ)*unew[id])
+        unew[ai] = atanh(tanh(Jₐ)*unew[ai])
         f[i] -= log(zₐ₂ᵢ) / dₐ
-        err = max(err, abs(unew[id] - u[id]))
-        u[id] = damp!(u[id], unew[id], damp)
+        err = max(err, abs(unew[ai] - u[ai]))
+        u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
 end

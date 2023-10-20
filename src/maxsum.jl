@@ -11,18 +11,19 @@ end
 function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ∂i = outedges(g, variable(i))
+    ei = edge_indices(g, variable(i))
+    ∂i = neighbors(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
-    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
-    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
+    d = (degree(g, factor(a)) for a in ∂i)
     errv = -Inf
-    for ((_,_,id), dₐ) in zip(∂i, d)
-        fᵢ₂ₐ = maximum(hnew[id])
+    for (ia, dₐ) in zip(ei, d)
+        fᵢ₂ₐ = maximum(hnew[ia])
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
-        hnew[id] .-= fᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[id] - h[id]))
-        h[id] = damp!(h[id], hnew[id], damp)
+        hnew[ia] .-= fᵢ₂ₐ
+        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     errb = mean(abs, bnew[i] - b[i])
     fᵢ  = maximum(bnew[i])
@@ -35,25 +36,27 @@ end
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Real};
         extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = inedges(g, factor(a))
+    ∂a = neighbors(g, factor(a))
+    ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
-    for ai in ∂a
-        unew[idx(ai)] .= -Inf
+    for ai in ea
+        unew[ai] .= -Inf
     end
-    for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-        for (i, ai) in pairs(∂a)
-            u[idx(ai)][xₐ[i]] = max(u[idx(ai)][xₐ[i]],  log(ψₐ(xₐ)) + 
-                sum(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=0.0))
+    
+    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+        for (i, ai) in pairs(ea)
+            u[ai][xₐ[i]] = max(u[ai][xₐ[i]],  log(ψₐ(xₐ)) + 
+                sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
         end
     end
     dₐ = degree(g, factor(a))
     err = -Inf
-    for (i, _, id) in ∂a
-        fₐ₂ᵢ = maximum(unew[id])
+    for (i, ai) in zip(∂a, ea)
+        fₐ₂ᵢ = maximum(unew[ai])
         f[i] -= fₐ₂ᵢ / dₐ
-        unew[id] .-= fₐ₂ᵢ
-        err = max(err, mean(abs, unew[id] - u[id]))
-        u[id] = damp!(u[id], unew[id], damp)
+        unew[ai] .-= fₐ₂ᵢ
+        err = max(err, mean(abs, unew[ai] - u[ai]))
+        u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
 end
