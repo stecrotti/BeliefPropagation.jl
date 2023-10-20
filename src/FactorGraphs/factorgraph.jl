@@ -23,6 +23,8 @@ Wraps index `i` in a container such that other functions like [`neighbors`](@ref
 """
 variable(i::Integer) = vertex(i, Variable)
 
+abstract type AbstractFactorGraph{T} end;
+
 """
     FactorGraph{T}
 

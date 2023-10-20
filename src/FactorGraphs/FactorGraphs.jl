@@ -11,6 +11,8 @@ using IndexedGraphs
 using Graphs: is_cyclic, prufer_decode
 using Graphs
 
+using FillArrays: Fill
+
 using SparseArrays: sparse, SparseMatrixCSC, nzrange
 using Random: AbstractRNG, default_rng
 using StatsBase: sample

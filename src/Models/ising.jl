@@ -47,7 +47,7 @@ function BeliefPropagation.BP(ising::Ising)
     return BP(g, ψ, qs; ϕ)
 end
 
-function fast_ising_bp(g::FactorGraph, ψ::Vector{<:IsingCoupling},
+function fast_ising_bp(g::AbstractFactorGraph, ψ::Vector{<:IsingCoupling},
         ϕ::Vector{<:IsingField}=fill(IsingField(0.0), nvariables(g)))
     u = zeros(ne(g))
     h = zeros(ne(g))
@@ -73,7 +73,6 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
-    # hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     cout, cfull = cavity(2cosh.(u[ei]), *, 1.0)
     d = (degree(g, factor(a)) for a in ∂i)

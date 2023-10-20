@@ -132,8 +132,8 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
     e = 0.0
     for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
+        ∂a = neighbors(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
             e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
         end
     end
@@ -146,22 +146,29 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
 end
 avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 
+_free_energy_correction(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1.0
+
+const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:RegularFactorGraph}
+_free_energy_correction(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
+
 function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
-    f = 0.0
+    fₐ = fᵢ = 0.0
     for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            f += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
+        ∂a = neighbors(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+            fₐ += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
         end
     end
+    fₐ *= _free_energy_correction(bp)
+
     for i in variables(g)
         dᵢ = degree(g, variable(i))
         for xᵢ in eachindex(b[i])
-            f += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
+            fᵢ += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
         end
     end
-    return f
+    return fₐ + fᵢ
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
