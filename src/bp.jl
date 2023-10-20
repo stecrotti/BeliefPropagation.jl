@@ -276,18 +276,19 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
         f::AtomicVector{<:Real}; extra_kwargs...) where {
         F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ϕ, u, h, b) = bp
-    ∂i = outedges(g, variable(i)) 
+    ei = edge_indices(g, variable(i)) 
+    ∂i = neighbors(g, variable(i))
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
-    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
-    d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
+    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
+    d = (degree(g, factor(a)) for a in ∂i)
     errv = -Inf
-    for ((_,_,id), dₐ) in zip(∂i, d)
-        zᵢ₂ₐ = sum(hnew[id])
+    for (ia, dₐ) in zip(ei, d)
+        zᵢ₂ₐ = sum(hnew[ia])
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
-        hnew[id] ./= zᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[id] - h[id]))
-        h[id] = damp!(h[id], hnew[id], damp)
+        hnew[ia] ./= zᵢ₂ₐ
+        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     errb = mean(abs, bnew[i] - b[i])
     zᵢ = sum(bnew[i])
@@ -301,25 +302,26 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         f::AtomicVector{<:Real}; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, u, h) = bp
-    ∂a = inedges(g, factor(a))
+    ∂a = neighbors(g, factor(a))
+    ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
-    for ai in ∂a
-        unew[idx(ai)] .= 0
+    for ai in ea
+        unew[ai] .= 0
     end
-    for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-        for (i, ai) in pairs(∂a)
-            unew[idx(ai)][xₐ[i]] += ψₐ(xₐ) * 
-                prod(h[idx(ja)][xₐ[j]] for (j, ja) in pairs(∂a) if j != i; init=1.0)
+    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+        for (i, ai) in pairs(ea)
+            unew[ai][xₐ[i]] += ψₐ(xₐ) * 
+                prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
         end
     end
     dₐ = degree(g, factor(a))
     err = -Inf
-    for (i, _, id) in ∂a
-        zₐ₂ᵢ = sum(unew[id])
+    for (i, ai) in zip(∂a, ea)
+        zₐ₂ᵢ = sum(unew[ai])
         f[i] -= log(zₐ₂ᵢ) / dₐ
-        unew[id] ./= zₐ₂ᵢ
-        err = max(err, mean(abs, unew[id] - u[id]))
-        u[id] = damp!(u[id], unew[id], damp)
+        unew[ai] ./= zₐ₂ᵢ
+        err = max(err, mean(abs, unew[ai] - u[ai]))
+        u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
 end

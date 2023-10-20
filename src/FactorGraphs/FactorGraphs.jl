@@ -21,6 +21,7 @@ include("generators.jl")
 export FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
     pairwise_interaction_graph,
     neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree,
+    edge_indices,
     adjacency_matrix, is_cyclic
 export rand_factor_graph, rand_regular_factor_graph, rand_tree_factor_graph
 

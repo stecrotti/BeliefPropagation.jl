@@ -3,8 +3,8 @@ module BeliefPropagation
 include("FactorGraphs/FactorGraphs.jl")
 
 using .FactorGraphs: FactorGraph, nvariables, nfactors, variables, factors, factor, variable,
-    neighbors, inedges, outedges, edges, src, dst, idx, ne, nv, degree
-using CavityTools: cavity 
+    neighbors, inedges, outedges, edge_indices, edges, src, dst, idx, ne, nv, degree
+using CavityTools: cavity, cavity! 
 using Random: AbstractRNG, default_rng
 using Statistics: mean
 using Lazy: @forward
