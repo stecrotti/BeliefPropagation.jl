@@ -1,6 +1,17 @@
-struct RegularFactorGraph <: AbstractFactorGraph{Int}
-    kₐ :: Int   # factor degree
-    kᵢ :: Int   # variable degree
+"""
+    RegularFactorGraph <: AbstractFactorGraph
+
+A type to represent an infinite regular factor graph with fixed factor and variable degree
+"""
+struct RegularFactorGraph{T<:Integer} <: AbstractFactorGraph{T}
+    kₐ :: T   # factor degree
+    kᵢ :: T   # variable degree
+
+    function RegularFactorGraph(kₐ::T, kᵢ::T) where {T<:Integer}
+        kₐ > 0 || throw(ArgumentError("Factor degree must be positive, got $kₐ"))
+        kᵢ > 0 || throw(ArgumentError("Factor degree must be positive, got $kᵢ"))
+        return new{T}(kₐ, kᵢ)
+    end
 end
 
 nvariables(::RegularFactorGraph) = 1
