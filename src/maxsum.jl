@@ -8,26 +8,28 @@ function iterate_ms!(bp::BP; kwargs...)
         kwargs...)
 end
 
-function update_v_ms!(bp::BP, i::Integer, hnew, damp::Real, rein::Real,
+function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
-    hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
+    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], msg_sum, logϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
-    err = -Inf
+    errv = -Inf
     for ((_,_,id), dₐ) in zip(∂i, d)
         fᵢ₂ₐ = maximum(hnew[id])
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
         hnew[id] .-= fᵢ₂ₐ
-        err = max(err, mean(abs, hnew[id] - h[id]))
+        errv = max(errv, mean(abs, hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
-    fᵢ  = maximum(b[i])
+    errb = mean(abs, bnew[i] - b[i])
+    fᵢ  = maximum(bnew[i])
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    b[i] = bnew[i]
     b[i] .-= fᵢ
-    return err
+    return errv, errb
 end
 
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Real};

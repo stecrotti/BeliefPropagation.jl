@@ -54,3 +54,13 @@ end
     b = beliefs(bp)
     test_observables(bp)
 end
+
+@testset "Convergence of beliefs" begin
+    n = 10
+    g = rand_tree_factor_graph(n)
+    qs = rand(rng, 2:4, nvariables(g))
+    bp = rand_bp(rng, g, qs)
+    iterate!(bp; maxiter=100, check_convergence=belief_convergence(1e-12))
+    b = beliefs(bp)
+    test_observables(bp)
+end

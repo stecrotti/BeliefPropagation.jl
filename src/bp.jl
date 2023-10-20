@@ -196,10 +196,19 @@ abstract type ConvergenceChecker end
 struct MessageConvergence{T<:Real} <: ConvergenceChecker
     tol :: T
 end
-msg_convergence(tol::Real) = MessageConvergence(tol)
+message_convergence(tol::Real) = MessageConvergence(tol)
 
-function (check_convergence::MessageConvergence)(bp::BP, errv, errf)
+function (check_convergence::MessageConvergence)(::BP, errv, errf, errb)
     max(maximum(errv), maximum(errf)) < check_convergence.tol
+end
+
+struct BeliefConvergence{T<:Real} <: ConvergenceChecker
+    tol :: T
+end
+belief_convergence(tol::Real) = BeliefConvergence(tol)
+
+function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
+    maximum(errb) < check_convergence.tol
 end
 
 """
@@ -224,24 +233,24 @@ Optional arguments
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
-        callback = (bp, errv, errf, it, f) -> nothing,
-        check_convergence=msg_convergence(tol),
+        callback = (bp, errv, errf, errb, it, f) -> nothing,
+        check_convergence=message_convergence(tol),
         extra_kwargs...
         )
-    (; g, u, h) = bp
-    unew = copy(u); hnew = copy(h)
-    errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
+    (; g, u, h, b) = bp
+    unew = copy(u); hnew = copy(h); bnew = copy(b)
+    errv = zeros(nvariables(g)); errf = zeros(nfactors(g)); errb = zeros(nvariables(g))
     ff = AtomicVector(f)
     for it in 1:maxiter
         ff .= 0
         @threads for i in variables(bp.g)
-            errv[i] = update_variable!(bp, i, hnew, damp, rein*it, ff; extra_kwargs...)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, ff; extra_kwargs...)
         end
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
-        callback(bp, errv, errf, it, f)
-        check_convergence(bp, errv, errf) && return it
+        callback(bp, errv, errf, errb, it, f)
+        check_convergence(bp, errv, errf, errb) && return it
     end
     return maxiter
 end
@@ -263,27 +272,29 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
     return x
 end
 
-function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, damp::Real, rein::Real,
+function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...) where {
         F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
-    hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
+    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], msg_mult, ϕᵢ)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
-    err = -Inf
+    errv = -Inf
     for ((_,_,id), dₐ) in zip(∂i, d)
         zᵢ₂ₐ = sum(hnew[id])
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
         hnew[id] ./= zᵢ₂ₐ
-        err = max(err, mean(abs, hnew[id] - h[id]))
+        errv = max(errv, mean(abs, hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
-    zᵢ = sum(b[i])
+    errb = mean(abs, bnew[i] - b[i])
+    zᵢ = sum(bnew[i])
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    b[i] = bnew[i]
     b[i] ./= zᵢ
-    return err
+    return errv, errb
 end
 
 function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,

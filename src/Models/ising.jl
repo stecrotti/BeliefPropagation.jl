@@ -67,24 +67,26 @@ const BPIsing = BP{<:IsingCoupling, <:IsingField, <:Real, <:Real}
 BeliefPropagation.nstates(bp::BPIsing, ::Integer) = 2
 
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
-        i::Integer, hnew, damp::Real, rein::Real,
+        i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
-    hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], +, hᵢ)
+    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
     cout, cfull = cavity(2cosh.(u[idx.(∂i)]), *, 1.0)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
-    err = -Inf
+    errv = -Inf
     for ((_,_,id), dₐ, c) in zip(∂i, d, cout)
         zᵢ₂ₐ = 2cosh(hnew[id]) / c
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
-        err = max(err, abs(hnew[id] - h[id]))
+        errv = max(errv, abs(hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
-    zᵢ = 2cosh(b[i]) / cfull
+    errb = abs(bnew[i] - b[i])
+    zᵢ = 2cosh(bnew[i]) / cfull
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
-    return err
+    b[i] = bnew[i]
+    return errv, errb
 end
 
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
@@ -129,24 +131,26 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
 end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
-        i::Integer, hnew, damp::Real, rein::Real,
+        i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ∂i = outedges(g, variable(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
-    hnew[idx.(∂i)], b[i] = cavity(u[idx.(∂i)], +, hᵢ)
+    hnew[idx.(∂i)], bnew[i] = cavity(u[idx.(∂i)], +, hᵢ)
     cout, cfull = cavity(abs.(u[idx.(∂i)]), +, 0.0)
     d = (degree(g, factor(a)) for a in neighbors(g, variable(i)))
-    err = -Inf
+    errv = -Inf
     for ((_,_,id), dₐ, c) in zip(∂i, d, cout)
         fᵢ₂ₐ = abs(hnew[id]) - c
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
-        err = max(err, abs(hnew[id] - h[id]))
+        errv = max(errv, abs(hnew[id] - h[id]))
         h[id] = damp!(h[id], hnew[id], damp)
     end
-    fᵢ = abs(b[i]) - cfull
+    errb = abs(bnew[i] - b[i])
+    fᵢ = abs(bnew[i]) - cfull
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
-    return err
+    b[i] = bnew[i]
+    return errv, errb
 end
 
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
