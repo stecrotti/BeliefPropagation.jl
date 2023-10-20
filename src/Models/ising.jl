@@ -128,11 +128,10 @@ end
 function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     (; g, ψ, h) = bp
     return map(factors(g)) do a
-        ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = zeros((nstates(bp, src(ia)) for ia in ∂a)...)
+        bₐ = zeros((nstates(bp, i) for i in neighbors(g, factor(a)))...)
         for xₐ in keys(bₐ)
-            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(exp(h[idx(ia)]*potts2spin(xₐ[i])) for (i, ia) in pairs(∂a); init=1.0)
+            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(exp(h[ia]*potts2spin(xₐ[i])) for (i, ia) in pairs(edge_indices(g, factor(a))); init=1.0)
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
@@ -194,10 +193,9 @@ end
 function BeliefPropagation.factor_beliefs_ms(bp::BPIsing)
     (; g, ψ, h) = bp
     return map(factors(g)) do a
-        ∂a = inedges(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)) do xₐ
-            log(ψₐ(xₐ)) + sum(h[idx(ia)]*potts2spin(xₐ[i]) for (i, ia) in pairs(∂a); init=0.0)
+        bₐ = map(Iterators.product((1:nstates(bp, i) for i in neighbors(g, factor(a)))...)) do xₐ
+            log(ψₐ(xₐ)) + sum(h[ia]*potts2spin(xₐ[i]) for (i, ia) in pairs(edge_indices(g, factor(a))); init=0.0)
         end
         zₐ = maximum(bₐ)
         bₐ .-= zₐ

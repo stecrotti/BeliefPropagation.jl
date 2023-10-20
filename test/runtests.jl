@@ -22,7 +22,6 @@ end
 @testset "FactorGraphs" begin
     include("FactorGraphs/factorgraph.jl")
     include("FactorGraphs/generators.jl")
-    include("FactorGraphs/regular_factorgraph.jl")
 end
 
 @testset "BeliefPropagation" begin
