@@ -5,6 +5,8 @@ An abstract type representing a factor.
 """
 abstract type BPFactor end
 
+Base.eltype(f::BPFactor) = typeof(f(1))
+
 """
     UniformFactor
 
@@ -20,14 +22,18 @@ struct UniformFactor <: BPFactor; end
 
 A type of `BPFactor` constructed by specifying the output to any input in a tabular fashion via an array `values`.
 """
-struct TabulatedBPFactor{T,N} <: BPFactor
+struct TabulatedBPFactor{T<:Real,N} <: BPFactor
     values :: Array{T,N}
 end
 
 function (f::TabulatedBPFactor)(x) 
-    isempty(x) && return 1.0
+    isempty(x) && return one(eltype(f.values))
     return f.values[x...]
 end
+
+Base.eltype(f::TabulatedBPFactor) = eltype(f.values)
+
+BPFactor(x) = TabulatedBPFactor(x)
 
 """
     TabulatedBPFactor(f::BPFactor, states)

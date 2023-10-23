@@ -60,6 +60,8 @@ const BPIsing = BP{<:IsingCoupling, <:IsingField, <:Real, <:Real}
 
 BeliefPropagation.nstates(bp::BPIsing, ::Integer) = 2
 
+Base.eltype(bp::BPIsing) = eltype(eltype(bp.b))
+
 function BeliefPropagation.reset!(bp::BPIsing)
     (; u, h, b) = bp
     u .= 0
