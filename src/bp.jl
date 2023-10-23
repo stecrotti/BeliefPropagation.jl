@@ -55,6 +55,7 @@ function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
         ϕ = fill(UniformFactor(), nvariables(g)))
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
     T = eltype(ψ[1])
+    all(eltype(ψₐ) == T for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
     u = [1/states[dst(e)]*ones(T, states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(T, states[dst(e)]) for e in edges(g)]
     b = [1/states[i]*ones(T, states[i]) for i in variables(g)]
@@ -122,7 +123,7 @@ function factor_beliefs_bp(bp::BP)
         ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
-            ψₐ(xₐ) * prod(h[ia][xₐ[i]...] for (i, ia) in pairs(ea); init=1.0)
+            ψₐ(xₐ) * prod(h[ia][xₐ[i]...] for (i, ia) in pairs(ea); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
