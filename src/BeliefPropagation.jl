@@ -20,7 +20,8 @@ include("maxsum.jl")
 include("Models/Models.jl")
 
 export BPFactor, TabulatedBPFactor, rand_factor, UniformFactor
-export AbstractFactorGraph, FactorGraph, variables, factors, nvariables, nfactors
+export AbstractFactorGraph, FactorGraph, RegularFactorGraph, variables, factors, nvariables, 
+    nfactors
 export BP, reset!, nstates, evaluate, energy
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
 export message_convergence, belief_convergence
