@@ -4,6 +4,7 @@ using Aqua
 using Graphs
 using IndexedGraphs
 using SparseArrays
+using Random: default_rng
 using Random
 using InvertedIndices
 

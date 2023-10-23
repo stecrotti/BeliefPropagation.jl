@@ -50,9 +50,11 @@ end
     g = rand_tree_factor_graph(n)
     qs = rand(rng, 2:4, nvariables(g))
     bp = rand_bp(rng, g, qs)
-    iterate!(bp; maxiter=100, tol=0.0)
+    f = zeros(n)
+    iterate!(bp; maxiter=100, tol=0.0, f)
     b = beliefs(bp)
     test_observables(bp)
+    @test sum(f) ≈ bethe_free_energy(bp)
 end
 
 @testset "Convergence of beliefs" begin

@@ -23,12 +23,14 @@ Wraps index `i` in a container such that other functions like [`neighbors`](@ref
 """
 variable(i::Integer) = vertex(i, Variable)
 
+abstract type AbstractFactorGraph{T} end;
+
 """
     FactorGraph{T}
 
 A type representing a [factor graph](https://en.wikipedia.org/wiki/Factor_graph).
 """
-struct FactorGraph{T}
+struct FactorGraph{T} <: AbstractFactorGraph{T}
     g :: BipartiteIndexedGraph{T}
 end
 """

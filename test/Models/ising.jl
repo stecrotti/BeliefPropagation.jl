@@ -74,11 +74,11 @@ end
     ising = Ising(g, J, h, β)
     bp = fast_ising_bp(ising)
     f = zeros(N)
-    iterate!(bp; maxiter=50, f, tol=0)
+    iterate!(bp; maxiter=50, f, tol=1e-10)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
     bp_slow = BP(ising)
-    iterate!(bp_slow; maxiter=50, tol=0)
+    iterate!(bp_slow; maxiter=50, tol=1e-10)
     b_slow = beliefs(bp_slow)
     fb_slow = factor_beliefs(bp_slow)
     @test b ≈ b_slow
@@ -97,11 +97,13 @@ end
     ψ = IsingCoupling.(J)
     ϕ = IsingField.(h)
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
-    iterate!(bp; maxiter=10, tol=0.0)
+    f = zeros(n)
+    iterate!(bp; maxiter=10, tol=0.0, f)
     test_observables(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
     iterate!(bp_fast; maxiter=10, tol=0.0)
     test_observables(bp_fast)
+    @test sum(f) ≈ bethe_free_energy(bp)
 
     ms = bp
     ms_fast = bp_fast
@@ -111,4 +113,36 @@ end
     @test beliefs_ms(ms) ≈ beliefs_ms(ms_fast)
     @test factor_beliefs_ms(ms) ≈ factor_beliefs_ms(ms_fast)
     @test sum(f) ≈ bethe_free_energy_ms(ms_fast)
+end
+
+@testset "Ising random regular" begin
+    J  = 1.0
+    h = -0.2
+
+    kₐ = 2
+    kᵢ = 3
+    g = RegularFactorGraph(kₐ, kᵢ)
+    ψ = [IsingCoupling(J)]
+    ϕ = [IsingField(h)]
+    bp = BP(g, ψ, 2; ϕ)
+    bp = fast_ising_bp(g, ψ, ϕ)
+    iterate!(bp; maxiter=100, tol=1e-12)
+
+    using Graphs
+    g2 = pairwise_interaction_graph(IndexedGraph(complete_graph(4)))
+    bp2 = fast_ising_bp(g2, fill(IsingCoupling(J), 6), fill(IsingField(h), 4))
+    iterate!(bp2; maxiter=100, tol=1e-12)
+
+    @test all(beliefs(bp)[1] ≈ beliefs(bp2)[i] for i in 1:4)
+    @test all(factor_beliefs(bp)[1] ≈ factor_beliefs(bp2)[ij] for ij in 1:6)
+    @test bethe_free_energy(bp)*4 ≈ bethe_free_energy(bp2)
+    @test avg_energy(bp)*4 ≈ avg_energy(bp2)
+
+    reset!(bp); reset!(bp2)
+    iterate_ms!(bp; maxiter=100, tol=1e-8)
+    iterate_ms!(bp2; maxiter=100, tol=1e-8)
+
+    @test all(beliefs_ms(bp)[1] ≈ beliefs_ms(bp2)[i] for i in 1:4)
+    @test all(factor_beliefs_ms(bp)[1] ≈ factor_beliefs_ms(bp2)[ij] for ij in 1:6)
+    @test bethe_free_energy_ms(bp)*4 ≈ bethe_free_energy_ms(bp2)
 end

@@ -13,16 +13,16 @@ Fields
 - `h`: messages from variable to factor
 - `b`: beliefs
 """
-struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:FactorGraph}
-    g :: G               # graph
-    ψ :: Vector{F}       # factors
-    ϕ :: Vector{FV}      # vertex-dependent factors
-    u :: AtomicVector{M}       # messages factor -> variable
-    h :: AtomicVector{M}       # messages variable -> factor
-    b :: Vector{MB}      # beliefs
+struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:AbstractFactorGraph}
+    g :: G
+    ψ :: Vector{F}
+    ϕ :: Vector{FV}
+    u :: AtomicVector{M}
+    h :: AtomicVector{M}
+    b :: Vector{MB}
 
     function BP(g::G, ψ::Vector{F}, ϕ::Vector{FV}, u::Vector{M}, h::Vector{M}, 
-        b::Vector{MB}) where {G<:FactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
+        b::Vector{MB}) where {G<:AbstractFactorGraph, F<:BPFactor, FV<:BPFactor, M, MB}
 
         nvar = nvariables(g)
         nfact = nfactors(g)
@@ -49,8 +49,8 @@ Arguments
 - `states`: an iterable of integers of length equal to the number of variable nodes specifyig the number of values each variable can take 
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 """
-function BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states;
-        ϕ = [UniformFactor(q) for q in states])
+function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
+        ϕ = [UniformFactor(states[i]) for i in eachindex(states)])
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
     u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
@@ -130,38 +130,46 @@ factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
 
 function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
-    e = 0.0
+    eₐ = eᵢ = 0.0
     for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            e += -log(ψ[a](xₐ)) * fb[a][xₐ...]
+        ∂a = neighbors(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+            eₐ += -log(ψ[a](xₐ)) * fb[a][xₐ...]
         end
     end
+    eₐ *= _free_energy_correction(bp)
     for i in variables(g)
         for xᵢ in eachindex(b[i])
-            e += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
+            eᵢ += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
         end
     end
-    return e
+    return eₐ + eᵢ
 end
 avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 
+_free_energy_correction(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1.0
+
+const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:RegularFactorGraph}
+_free_energy_correction(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
+
 function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
-    f = 0.0
+    fₐ = fᵢ = 0.0
     for a in factors(g)
-        ∂a = inedges(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, src(e)) for e in ∂a)...)
-            f += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
+        ∂a = neighbors(g, factor(a))
+        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+            fₐ += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
         end
     end
+    fₐ *= _free_energy_correction(bp)
+
     for i in variables(g)
         dᵢ = degree(g, variable(i))
         for xᵢ in eachindex(b[i])
-            f += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
+            fᵢ += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
         end
     end
-    return f
+    return fₐ + fᵢ
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
@@ -238,16 +246,16 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
         extra_kwargs...
         )
     (; g, u, h, b) = bp
-    unew = copy(u); hnew = copy(h); bnew = copy(b)
+    unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
     errv = zeros(nvariables(g)); errf = zeros(nfactors(g)); errb = zeros(nvariables(g))
     ff = AtomicVector(f)
     for it in 1:maxiter
         ff .= 0
-        @threads for i in variables(bp.g)
-            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, ff; extra_kwargs...)
-        end
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
+        end
+        @threads for i in variables(bp.g)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, ff; extra_kwargs...)
         end
         callback(bp, errv, errf, errb, it, f)
         check_convergence(bp, errv, errf, errb) && return it
@@ -290,11 +298,11 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
         errv = max(errv, mean(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = mean(abs, bnew[i] - b[i])
     zᵢ = sum(bnew[i])
+    bnew[i] ./= zᵢ
+    errb = mean(abs, bnew[i] - b[i])
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] = bnew[i]
-    b[i] ./= zᵢ
     return errv, errb
 end
 

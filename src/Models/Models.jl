@@ -1,7 +1,7 @@
 module Models 
 
-using BeliefPropagation.FactorGraphs: FactorGraph, pairwise_interaction_graph, factor,
-    variable, degree, edge_indices
+using BeliefPropagation.FactorGraphs: AbstractFactorGraph, FactorGraph,
+    pairwise_interaction_graph, factor, variable, degree, edge_indices
 
 using BeliefPropagation: BPFactor, BP
 import BeliefPropagation: AtomicVector, damp!, cavity, cavity!

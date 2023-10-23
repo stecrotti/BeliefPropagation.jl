@@ -25,11 +25,11 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
         errv = max(errv, mean(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = mean(abs, bnew[i] - b[i])
     fᵢ  = maximum(bnew[i])
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    bnew[i] .-= fᵢ
+    errb = mean(abs, bnew[i] - b[i])
     b[i] = bnew[i]
-    b[i] .-= fᵢ
     return errv, errb
 end
 
@@ -45,7 +45,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Re
     
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
-            u[ai][xₐ[i]] = max(u[ai][xₐ[i]],  log(ψₐ(xₐ)) + 
+            unew[ai][xₐ[i]] = max(u[ai][xₐ[i]], log(ψₐ(xₐ)) + 
                 sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
         end
     end
@@ -85,18 +85,19 @@ end
 
 function avg_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     (; g, ψ, ϕ) = bp
-    e = 0.0
+    eₐ = eᵢ = 0.0
     for a in factors(g)
         bₐ = fb[a]
         xmax = argmax(bₐ) |> Tuple
-        e -= log(ψ[a](xmax)) 
+        eₐ -= log(ψ[a](xmax)) 
     end
+    eₐ *= _free_energy_correction(bp)
     for i in variables(g)
         bᵢ = b[i]
         xmax = argmax(bᵢ)
-        e -= log(ϕ[i](xmax))
+        eᵢ -= log(ϕ[i](xmax))
     end
-    return e
+    return eₐ + eᵢ
 end
 
 function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))

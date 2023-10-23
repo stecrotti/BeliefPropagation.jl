@@ -44,7 +44,11 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, qs)
     ψ = [rand_factor(rng, [qs[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
     return BP(g, ψ, qs)  
 end
-rand_bp(g::FactorGraph, qs) = rand_bp(default_rng(), g, qs)
+function rand_bp(rng::AbstractRNG, g::RegularFactorGraph, q)
+    ψ = [rand_factor(rng, fill(q, degree(g, factor(1))))] 
+    return BP(g, ψ, q)  
+end
+rand_bp(g::AbstractFactorGraph, qs) = rand_bp(default_rng(), g, qs)
 
 function test_observables(bp::BP; kwargs...)
     @test isapprox(beliefs(bp), exact_marginals(bp); kwargs...)
