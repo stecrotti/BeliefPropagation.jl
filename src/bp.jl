@@ -115,11 +115,12 @@ beliefs(bp::BP) = beliefs(beliefs_bp, bp)
 function factor_beliefs_bp(bp::BP)
     (; g, ψ, h) = bp
     return map(factors(g)) do a
-        ∂a = inedges(g, factor(a))
+        ∂a = neighbors(g, factor(a))
+        ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = zeros((nstates(bp, src(ia)) for ia in ∂a)...)
+        bₐ = zeros((nstates(bp, i) for i in ∂a)...)
         for xₐ in keys(bₐ)
-            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[idx(ia)][xₐ[i]] for (i, ia) in pairs(∂a); init=1.0)
+            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ

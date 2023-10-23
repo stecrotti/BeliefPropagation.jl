@@ -4,7 +4,7 @@ include("FactorGraphs/FactorGraphs.jl")
 
 using .FactorGraphs: AbstractFactorGraph, FactorGraph, RegularFactorGraph, FactorGraphVertex,
     nvariables, nfactors, variables, factors, factor, variable,
-    neighbors, inedges, outedges, edge_indices, edges, src, dst, idx, ne, nv, degree
+    neighbors, edge_indices, edges, src, dst, idx, ne, nv, degree
 using CavityTools: cavity, cavity! 
 using Random: AbstractRNG, default_rng
 using Statistics: mean

@@ -140,8 +140,8 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
 end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
-    i::Integer, hnew, bnew, damp::Real, rein::Real,
-    f::AtomicVector{<:Real}; extra_kwargs...)
+        i::Integer, hnew, bnew, damp::Real, rein::Real,
+        f::AtomicVector{<:Real}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
