@@ -54,8 +54,9 @@ Arguments
 function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
         ϕ = fill(UniformFactor(), nvariables(g)))
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
-    T = eltype(ψ[1])
-    all(eltype(ψₐ) == T for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
+    all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
     u = [1/states[dst(e)]*ones(T, states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(T, states[dst(e)]) for e in edges(g)]
     b = [1/states[i]*ones(T, states[i]) for i in variables(g)]

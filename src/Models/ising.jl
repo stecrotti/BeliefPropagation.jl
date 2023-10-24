@@ -43,8 +43,9 @@ end
 
 function fast_ising_bp(g::AbstractFactorGraph, ψ::Vector{<:IsingCoupling},
         ϕ::Vector{<:IsingField}=fill(IsingField(0.0), nvariables(g)))
-    T = eltype(ψ[1])
-    all(eltype(ψₐ) == T for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
+    all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
     u = zeros(T, ne(g))
     h = zeros(T, ne(g))
     b = zeros(T, nvariables(g))
