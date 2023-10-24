@@ -8,6 +8,7 @@ using Random: default_rng
 using Random
 using InvertedIndices
 
+using BeliefPropagation
 using BeliefPropagation.FactorGraphs
 using BeliefPropagation.Models
 

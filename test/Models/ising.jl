@@ -105,6 +105,16 @@ end
     test_observables(bp_fast)
     @test sum(f) ≈ bethe_free_energy(bp)
 
+    @testset "Generic BP factor" begin
+        ψ_generic = [TabulatedBPFactor(ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
+        ϕ_generic = [TabulatedBPFactor(ϕ[i], (2,)) for i in variables(g)]
+        bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
+        f = zeros(n)
+        iterate!(bp_generic; maxiter=10, tol=0.0, f)
+        test_observables(bp_generic)
+        @test sum(f) ≈ bethe_free_energy(bp_generic)
+    end
+
     ms = bp
     ms_fast = bp_fast
     iterate_ms!(ms; maxiter=10, tol=0.0)
@@ -115,7 +125,7 @@ end
     @test sum(f) ≈ bethe_free_energy_ms(ms_fast)
 end
 
-@testset "Ising random regular" begin
+@testset "Ising infinite random regular" begin
     J  = 1.0
     h = -0.2
 

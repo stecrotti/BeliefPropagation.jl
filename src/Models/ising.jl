@@ -4,19 +4,13 @@ struct IsingCoupling{T<:Real}  <: BPFactor
     βJ :: T 
 end
 
-function (f::IsingCoupling)(x)
-    (; βJ) = f
-    return exp(βJ * prod(potts2spin(xᵢ) for xᵢ in x))
-end
+(f::IsingCoupling)(x) = exp(f.βJ * prod(potts2spin(xᵢ) for xᵢ in x))
 
 struct IsingField{T<:Real}  <: BPFactor 
     βh :: T 
 end
 
-function (f::IsingField)(x::Integer)
-    (; βh) = f
-    return exp(βh * potts2spin(x))
-end
+(f::IsingField)(x) = exp(f.βh * potts2spin(only(x)))
 
 # Ising model with xᵢ ∈ {1,2} mapped onto spins {+1,-1}
 struct Ising{T<:Real}

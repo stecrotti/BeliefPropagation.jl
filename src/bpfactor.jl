@@ -37,7 +37,7 @@ end
 Construct a `TabulatedBPFactor` out of any `BPFactor`. Used mostly for tests.
 """
 function TabulatedBPFactor(f::BPFactor, states)
-    values = [f(x...) for x in Iterators.product((1:q for q in states))]
+    values = [f(x) for x in Iterators.product((1:q for q in states)...)]
     return TabulatedBPFactor(values)
 end
 
