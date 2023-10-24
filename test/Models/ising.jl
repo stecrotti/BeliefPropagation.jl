@@ -106,8 +106,8 @@ end
     @test sum(f) ≈ bethe_free_energy(bp)
 
     @testset "Generic BP factor" begin
-        ψ_generic = [TabulatedBPFactor(ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
-        ϕ_generic = [TabulatedBPFactor(ϕ[i], (2,)) for i in variables(g)]
+        ψ_generic = [BPFactor(ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
+        ϕ_generic = [BPFactor(ϕ[i], (2,)) for i in variables(g)]
         bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
         f = zeros(n)
         iterate!(bp_generic; maxiter=10, tol=0.0, f)

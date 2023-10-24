@@ -42,7 +42,7 @@ function TabulatedBPFactor(f::BPFactor, states)
 end
 
 # default constructor for `BPFactor`
-BPFactor(x) = TabulatedBPFactor(x)
+BPFactor(f::BPFactor, states) = TabulatedBPFactor(f, states)
 
 """
     rand_factor([rng,], states)
