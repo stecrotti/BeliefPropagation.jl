@@ -22,8 +22,8 @@ end
 
 A type of `BPFactor` constructed by specifying the output to any input in a tabular fashion via an array `values`.
 """
-struct TabulatedBPFactor{N,F} <: BPFactor
-    values :: Array{N,F}
+struct TabulatedBPFactor{T,N} <: BPFactor
+    values :: Array{T,N}
 end
 
 function (f::TabulatedBPFactor)(x) 
@@ -41,7 +41,8 @@ function TabulatedBPFactor(f::BPFactor, states)
     return TabulatedBPFactor(values)
 end
 
-# default constructor for `BPFactor`
+# default constructors for `BPFactor`
+BPFactor(values) = TabulatedBPFactor(values)
 BPFactor(f::BPFactor, states) = TabulatedBPFactor(f, states)
 
 """
@@ -68,8 +69,8 @@ julia> f([1, 4, 2])
 ```
 """
 function rand_factor(rng::AbstractRNG, states)
-    isempty(states) && return TabulatedBPFactor(zeros(0))
+    isempty(states) && return BPFactor(zeros(0))
     values = rand(rng, states...)
-    return TabulatedBPFactor(values)
+    return BPFactor(values)
 end
 rand_factor(states) = rand_factor(default_rng(), states)
