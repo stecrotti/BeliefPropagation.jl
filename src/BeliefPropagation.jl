@@ -10,6 +10,7 @@ using Random: AbstractRNG, default_rng
 using Statistics: mean
 using Lazy: @forward
 using Base.Threads: @threads, SpinLock
+using LogExpFunctions: xlogx, xlogy
 
 include("bpfactor.jl")
 include("atomic_vector.jl")

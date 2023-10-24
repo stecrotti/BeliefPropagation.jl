@@ -41,6 +41,9 @@ function TabulatedBPFactor(f::BPFactor, states)
     return TabulatedBPFactor(values)
 end
 
+# default constructor for `BPFactor`
+BPFactor(x) = TabulatedBPFactor(x)
+
 """
     rand_factor([rng,], states)
 
