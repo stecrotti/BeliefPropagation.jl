@@ -24,6 +24,10 @@ A type of `BPFactor` constructed by specifying the output to any input in a tabu
 """
 struct TabulatedBPFactor{T<:Real,N} <: BPFactor
     values :: Array{T,N}
+    function TabulatedBPFactor(values::Array{T,N}) where {T<:Real,N}
+        any(<(0), values) && throw(ArgumentError("Factors can only take non-negative values"))
+        return new{T,N}(values)
+    end
 end
 
 function (f::TabulatedBPFactor)(x) 
