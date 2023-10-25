@@ -11,10 +11,8 @@ abstract type BPFactor end
 A type of `BPFactor` which returns the same value for any input: it behaves as if it wasn't even there.
 It is used as the default for single-variable factors
 """
-struct UniformFactor{T<:Integer} <: BPFactor
-    N :: T
-end
-(f::UniformFactor)(::Integer) = 1 / f.N
+struct UniformFactor <: BPFactor; end
+(f::UniformFactor)(x) = 1
 
 # stores in an array `values` the result of evaluating the factor at all possible inputs 
 """
@@ -22,8 +20,8 @@ end
 
 A type of `BPFactor` constructed by specifying the output to any input in a tabular fashion via an array `values`.
 """
-struct TabulatedBPFactor{N,F} <: BPFactor
-    values :: Array{N,F}
+struct TabulatedBPFactor{T,N} <: BPFactor
+    values :: Array{T,N}
 end
 
 function (f::TabulatedBPFactor)(x) 
@@ -40,6 +38,10 @@ function TabulatedBPFactor(f::BPFactor, states)
     values = [f(x) for x in Iterators.product((1:q for q in states)...)]
     return TabulatedBPFactor(values)
 end
+
+# default constructors for `BPFactor`
+BPFactor(values) = TabulatedBPFactor(values)
+BPFactor(f::BPFactor, states) = TabulatedBPFactor(f, states)
 
 """
     rand_factor([rng,], states)
@@ -65,8 +67,8 @@ julia> f([1, 4, 2])
 ```
 """
 function rand_factor(rng::AbstractRNG, states)
-    isempty(states) && return TabulatedBPFactor(zeros(0))
+    isempty(states) && return BPFactor(zeros(0))
     values = rand(rng, states...)
-    return TabulatedBPFactor(values)
+    return BPFactor(values)
 end
 rand_factor(states) = rand_factor(default_rng(), states)

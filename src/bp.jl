@@ -50,7 +50,7 @@ Arguments
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 """
 function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
-        ϕ = [UniformFactor(states[i]) for i in eachindex(states)])
+        ϕ = fill(UniformFactor(), nvariables(g)))
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
     u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
@@ -135,13 +135,13 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
         for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-            eₐ += -log(ψ[a](xₐ)) * fb[a][xₐ...]
+            eₐ += -xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
     eₐ *= _free_energy_correction(bp)
     for i in variables(g)
         for xᵢ in eachindex(b[i])
-            eᵢ += -log(ϕ[i](xᵢ)) * b[i][xᵢ]
+            eₐ += -xlogy(b[i][xᵢ], ϕ[i](xᵢ))
         end
     end
     return eₐ + eᵢ
@@ -159,7 +159,7 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
         for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-            fₐ += log(fb[a][xₐ...] / ψ[a](xₐ)) * fb[a][xₐ...]
+            fₐ += xlogx(fb[a][xₐ...]) - xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
     fₐ *= _free_energy_correction(bp)
@@ -167,7 +167,7 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     for i in variables(g)
         dᵢ = degree(g, variable(i))
         for xᵢ in eachindex(b[i])
-            fᵢ += log((b[i][xᵢ])^(1-dᵢ) / ϕ[i](xᵢ)) * b[i][xᵢ]
+            fᵢ += (1-dᵢ) * xlogx(b[i][xᵢ]) - xlogy(b[i][xᵢ], ϕ[i](xᵢ))
         end
     end
     return fₐ + fᵢ
