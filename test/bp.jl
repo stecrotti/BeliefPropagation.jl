@@ -1,5 +1,29 @@
 rng = MersenneTwister(0)
 
+@testset "Basic example - no ϕ factors" begin
+    A = [0 1 1 0;
+         1 0 0 0;
+         0 0 1 1]
+    g = FactorGraph(A)
+    states = [3, 2, 2, 4]
+    ψ₁ = BPFactor([1.1 0.3;
+               0.5 2.5])
+    ψ₂ = BPFactor([1.0, 0.3, 1.0])
+    ψ₃ = BPFactor([0.8 0.0 0.1 0.9;
+                0.0 2.9 0.7 1.1])
+    ψ = [ψ₁, ψ₂, ψ₃]
+    bp = BP(g, ψ, states)
+    iterate!(bp; maxiter=2, tol=1e-12)
+    f_bethe = bethe_free_energy(bp)
+    z_bethe = exp(-f_bethe)
+    z = sum(ψ₁([x₂,x₃]) * ψ₂([x₁]) * ψ₃([x₃, x₄])
+        for x₁ in 1:3, x₂ in 1:2, x₃ in 1:2, x₄ in 1:4)
+    @test z_bethe ≈ z
+    p43 = 1/z * sum((x₄==3) * ψ₁([x₂,x₃]) * ψ₂([x₁]) * ψ₃([x₃, x₄])
+        for x₁ in 1:3, x₂ in 1:2, x₃ in 1:2, x₄ in 1:4)
+    @test beliefs(bp)[4][3] ≈ p43
+end
+
 @testset "Isolated nodes" begin
     g = FactorGraph([0 1 1 0 0;
                      1 0 0 0 0;
