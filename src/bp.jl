@@ -36,6 +36,8 @@ struct BP{F<:BPFactor, FV<:BPFactor, M, MB, G<:AbstractFactorGraph}
     end
 end
 
+Base.eltype(bp::BP) = eltype(eltype(bp.b))
+
 """
     BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, qs; ϕ)
 
@@ -52,9 +54,12 @@ Arguments
 function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
         ϕ = fill(UniformFactor(), nvariables(g)))
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
-    u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
-    h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
-    b = [1/states[i]*ones(states[i]) for i in variables(g)]
+    T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
+    all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
+    u = [fill(one(T)/states[dst(e)], states[dst(e)]) for e in edges(g)]
+    h = [fill(one(T)/states[dst(e)], states[dst(e)]) for e in edges(g)]
+    b = [fill(one(T)/states[i], states[i]) for i in variables(g)]
     return BP(g, ψ, ϕ, u, h, b)
 end
 
@@ -118,9 +123,8 @@ function factor_beliefs_bp(bp::BP)
         ∂a = neighbors(g, factor(a))
         ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = zeros((nstates(bp, i) for i in ∂a)...)
-        for xₐ in keys(bₐ)
-            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
+        bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
+            ψₐ(xₐ) * prod(h[ia][xₐ[i]...] for (i, ia) in pairs(ea); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
@@ -241,14 +245,16 @@ Optional arguments
 """
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        f::AbstractVector{<:Real} = zeros(nvariables(bp.g)),
+        f::AbstractVector{<:Real} = zeros(eltype(bp), nvariables(bp.g)),
         callback = (bp, errv, errf, errb, it, f) -> nothing,
         check_convergence=message_convergence(tol),
         extra_kwargs...
         )
     (; g, u, h, b) = bp
+    T = eltype(bp)
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
-    errv = zeros(nvariables(g)); errf = zeros(nfactors(g)); errb = zeros(nvariables(g))
+    errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
+    errb = zeros(T, nvariables(g))
     ff = AtomicVector(f)
     for it in 1:maxiter
         ff .= 0

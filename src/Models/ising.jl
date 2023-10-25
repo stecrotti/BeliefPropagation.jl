@@ -43,9 +43,12 @@ end
 
 function fast_ising_bp(g::AbstractFactorGraph, ψ::Vector{<:IsingCoupling},
         ϕ::Vector{<:IsingField}=fill(IsingField(0.0), nvariables(g)))
-    u = zeros(ne(g))
-    h = zeros(ne(g))
-    b = zeros(nvariables(g))
+    T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
+    all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
+    all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
+    u = zeros(T, ne(g))
+    h = zeros(T, ne(g))
+    b = zeros(T, nvariables(g))
     return BP(g, ψ, ϕ, u, h, b)
 end
 
@@ -59,6 +62,8 @@ end
 const BPIsing = BP{<:IsingCoupling, <:IsingField, <:Real, <:Real}
 
 BeliefPropagation.nstates(bp::BPIsing, ::Integer) = 2
+
+Base.eltype(bp::BPIsing) = eltype(eltype(bp.b))
 
 function BeliefPropagation.reset!(bp::BPIsing)
     (; u, h, b) = bp
@@ -76,7 +81,7 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
     ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
-    cout, cfull = cavity(2cosh.(u[ei]), *, 1.0)
+    cout, cfull = cavity(2cosh.(u[ei]), *, one(eltype(bp)))
     d = (degree(g, factor(a)) for a in ∂i)
     errv = -Inf
     for (ia, dₐ, c) in zip(ei, d, cout)
@@ -98,8 +103,8 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    @views cavity!(unew[ea], tanh.(h[ea]), *, 1.0)
-    unew[ea] .= atanh.(tanh(Jₐ).*unew[ea])
+    @views cavity!(unew[ea], tanh.(h[ea]), *, one(eltype(bp)))
+    unew[ea] .= atanh.(tanh(Jₐ) .* unew[ea])
     dₐ = degree(g, factor(a))
     err = -Inf
     for (i, ai) in zip(∂a, ea)
@@ -123,9 +128,10 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     (; g, ψ, h) = bp
     return map(factors(g)) do a
         ψₐ = ψ[a]
-        bₐ = zeros((nstates(bp, i) for i in neighbors(g, factor(a)))...)
-        for xₐ in keys(bₐ)
-            bₐ[xₐ] = ψₐ(Tuple(xₐ)) * prod(exp(h[ia]*potts2spin(xₐ[i])) for (i, ia) in pairs(edge_indices(g, factor(a))); init=1.0)
+        ∂a = neighbors(g, factor(a))
+        bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
+            ψₐ(xₐ) * prod(exp(h[ia]*potts2spin(xₐ[i])) 
+                for (i, ia) in pairs(edge_indices(g, factor(a))); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ

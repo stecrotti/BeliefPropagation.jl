@@ -76,7 +76,7 @@ function factor_beliefs_ms(bp::BP)
         ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
-            log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0)
+            log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=zero(eltype(bp)))
         end
         zₐ = maximum(bₐ)
         bₐ .-= zₐ

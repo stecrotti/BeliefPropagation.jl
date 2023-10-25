@@ -7,6 +7,7 @@ using SparseArrays
 using Random: default_rng
 using Random
 using InvertedIndices
+using ForwardDiff
 
 using BeliefPropagation
 using BeliefPropagation.FactorGraphs
@@ -31,6 +32,10 @@ end
 
 @testset "Ising" begin
     include("Models/ising.jl")
+end
+
+@testset "Autodiff" begin
+    include("autodiff.jl")
 end
 
 nothing
