@@ -11,10 +11,8 @@ abstract type BPFactor end
 A type of `BPFactor` which returns the same value for any input: it behaves as if it wasn't even there.
 It is used as the default for single-variable factors
 """
-struct UniformFactor{T<:Integer} <: BPFactor
-    N :: T
-end
-(f::UniformFactor)(::Integer) = 1 / f.N
+struct UniformFactor <: BPFactor; end
+(f::UniformFactor)(x) = 1
 
 # stores in an array `values` the result of evaluating the factor at all possible inputs 
 """

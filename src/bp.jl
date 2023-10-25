@@ -50,7 +50,7 @@ Arguments
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 """
 function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
-        ϕ = [UniformFactor(states[i]) for i in eachindex(states)])
+        ϕ = fill(UniformFactor(), nvariables(g)))
     length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
     u = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
     h = [1/states[dst(e)]*ones(states[dst(e)]) for e in edges(g)]
