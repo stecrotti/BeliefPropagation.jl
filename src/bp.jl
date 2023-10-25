@@ -245,7 +245,7 @@ Optional arguments
 """
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        f::AbstractVector{<:Real} = zeros(eltype(bp), nvariables(bp.g)),
+        f::AbstractVector{<:Real} = zeros(eltype(bp), 2),
         callback = (bp, errv, errf, errb, it, f) -> nothing,
         check_convergence=message_convergence(tol),
         extra_kwargs...
@@ -300,7 +300,6 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
     errv = -Inf
     for (ia, dₐ) in zip(ei, d)
         zᵢ₂ₐ = sum(hnew[ia])
-        f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
         hnew[ia] ./= zᵢ₂ₐ
         errv = max(errv, mean(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
@@ -308,7 +307,7 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
     errb = mean(abs, bnew[i] - b[i])
-    f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
+    f[2] -= log(zᵢ)
     b[i] = bnew[i]
     return errv, errb
 end
@@ -323,17 +322,18 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     for ai in ea
         unew[ai] .= 0
     end
+    zₐ = isempty(∂a) ? one(eltype(bp)) : zero(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
-            unew[ai][xₐ[i]] += ψₐ(xₐ) * 
+            unew[ai][xₐ[i]] += ψₐ(xₐ) *
                 prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
         end
+        zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
     end
-    dₐ = degree(g, factor(a))
+    f[1] -= log(zₐ)
     err = -Inf
     for (i, ai) in zip(∂a, ea)
         zₐ₂ᵢ = sum(unew[ai])
-        f[i] -= log(zₐ₂ᵢ) / dₐ
         unew[ai] ./= zₐ₂ᵢ
         err = max(err, mean(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
