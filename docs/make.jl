@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup,
     :(using BeliefPropagation); recursive=true)
 
 makedocs(;
-    modules=[BeliefPropagation, FactorGraphsPlotsExt],
+    modules=[BeliefPropagation],
     authors="stecrotti <stefano.crotti@polito.it>",
     repo="https://github.com/stecrotti/BeliefPropagation.jl/blob/{commit}{path}#{line}",
     sitename="BeliefPropagation.jl",
