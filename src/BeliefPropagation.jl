@@ -7,7 +7,6 @@ using .FactorGraphs: AbstractFactorGraph, FactorGraph, RegularFactorGraph, Facto
     neighbors, edge_indices, edges, src, dst, idx, ne, nv, degree
 using CavityTools: cavity, cavity! 
 using Random: AbstractRNG, default_rng
-using Statistics: mean
 using Lazy: @forward
 using Base.Threads: @threads, SpinLock
 using LogExpFunctions: xlogx, xlogy

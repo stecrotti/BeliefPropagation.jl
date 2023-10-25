@@ -302,12 +302,12 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
         zᵢ₂ₐ = sum(hnew[ia])
         f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
         hnew[ia] ./= zᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
-    errb = mean(abs, bnew[i] - b[i])
+    errb = maximum(abs, bnew[i] - b[i])
     f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     b[i] = bnew[i]
     return errv, errb
@@ -335,7 +335,7 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         zₐ₂ᵢ = sum(unew[ai])
         f[i] -= log(zₐ₂ᵢ) / dₐ
         unew[ai] ./= zₐ₂ᵢ
-        err = max(err, mean(abs, unew[ai] - u[ai]))
+        err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err

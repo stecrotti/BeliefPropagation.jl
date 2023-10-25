@@ -17,18 +17,18 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     msg_sum(m1, m2) = m1 .+ m2
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
     d = (degree(g, factor(a)) for a in ∂i)
-    errv = -Inf
+    errv = typemin(eltype(bp))
     for (ia, dₐ) in zip(ei, d)
         fᵢ₂ₐ = maximum(hnew[ia])
         f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
         hnew[ia] .-= fᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     fᵢ  = maximum(bnew[i])
     f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
     bnew[i] .-= fᵢ
-    errb = mean(abs, bnew[i] - b[i])
+    errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     return errv, errb
 end
@@ -40,7 +40,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Re
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
     for ai in ea
-        unew[ai] .= -Inf
+        unew[ai] .= typemin(eltype(bp))
     end
     
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
@@ -50,12 +50,12 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Re
         end
     end
     dₐ = degree(g, factor(a))
-    err = -Inf
+    err = typemin(eltype(bp))
     for (i, ai) in zip(∂a, ea)
         fₐ₂ᵢ = maximum(unew[ai])
         f[i] -= fₐ₂ᵢ / dₐ
         unew[ai] .-= fₐ₂ᵢ
-        err = max(err, mean(abs, unew[ai] - u[ai]))
+        err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err

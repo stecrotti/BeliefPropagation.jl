@@ -64,6 +64,25 @@ end
     @test e ≈ sum(f)
 end
 
+@testset "Ising random tree - maxsum with integer messages" begin
+    rng = MersenneTwister(0)
+    N = 9
+    g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
+    J = rand(rng, -5:5, ne(g))
+    h = rand(rng, -5:5, nv(g))
+    β = 1
+    ising = Ising(g, J, h, β)
+    bp_float = BP(ising)
+    bp = BP(bp_float.g, bp_float.ψ, bp_float.ϕ, [[1,1] for _ in bp_float.u],
+        [[1,1] for _ in bp_float.h], [[1,1] for _ in bp_float.b])
+    f = zeros(N)
+    iterate_ms!(bp; maxiter=20, f, tol=0)
+    e = avg_energy(avg_energy_ms, bp)
+    e_ex = exact_minimum_energy(bp)
+    @test e ≈ e_ex
+    @test e ≈ sum(f)
+end
+
 @testset "Ising random tree - fast version" begin
     rng = MersenneTwister(1)
     N = 20
