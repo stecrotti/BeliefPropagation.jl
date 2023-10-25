@@ -46,7 +46,7 @@ function TabulatedBPFactor(f::BPFactor, states)
 end
 
 # default constructors for `BPFactor`
-BPFactor(values) = TabulatedBPFactor(values)
+BPFactor(values::Array{T,N}) where {T<:Real,N} = TabulatedBPFactor(values)
 BPFactor(f::BPFactor, states) = TabulatedBPFactor(f, states)
 
 """
