@@ -51,8 +51,8 @@ FactorGraph(g::AbstractIndexedGraph) = FactorGraph(BipartiteIndexedGraph(g))
 
 Construct a factor graph whose factors are the pair-wise interactions encoded in `g`.
 """
-function pairwise_interaction_graph(g::IndexedGraph)
-    I = reduce(vcat, [idx(e), idx(e)] for e in edges(g)) 
+function pairwise_interaction_graph(g::AbstractGraph)
+    I = reduce(vcat, [e, e] for e in 1:ne(g))
     J = reduce(vcat, [src(e), dst(e)] for e in edges(g)) 
     K = ones(Int, 2*ne(g))
     A = sparse(I, J, K)
