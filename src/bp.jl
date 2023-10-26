@@ -224,20 +224,24 @@ function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
     maximum(errb) < check_convergence.tol
 end
 
-struct BetheFreeEnergy{T<:AbstractVector{<:Real}}
+struct BetheFreeEnergy{T<:AbstractVector{<:Real}, F<:Real}
     factors   :: T
     variables :: T
     edges     :: T
+    corr      :: F
 end
 function init_free_energy(bp::BP)
     T = eltype(bp)
     a = zeros(T, nfactors(bp.g))
     i = zeros(T, nvariables(bp.g))
     ai = zeros(T, ne(bp.g))
-    return BetheFreeEnergy(a, i, ai)
+    return BetheFreeEnergy(a, i, ai, _free_energy_correction(bp))
 end
 Base.length(::BetheFreeEnergy) = 3
 Base.iterate(f::BetheFreeEnergy, args...) = iterate((f.factors, f.variables, f.edges), args...)
+
+bethe_free_energy(f::BetheFreeEnergy) = f.corr * sum(f.factors) + sum(f.variables) - sum(f.edges)
+Base.sum(f::BetheFreeEnergy) = bethe_free_energy(f)
 
 """
     iterate!(bp::BP; kwargs...)
@@ -270,7 +274,7 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
     errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
-    ff = BetheFreeEnergy(map(AtomicVector, f)...)
+    ff = BetheFreeEnergy(map(AtomicVector, f)..., f.corr)
     for it in 1:maxiter
         foreach(x -> x .= 0, ff)
         @threads for a in factors(bp.g)
@@ -354,6 +358,3 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     end
     return err
 end
-
-bethe_free_energy(f::BetheFreeEnergy) = sum(f.factors) + sum(f.variables) - sum(f.edges)
-Base.sum(f::BetheFreeEnergy) = bethe_free_energy(f)

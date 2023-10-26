@@ -24,13 +24,12 @@ end
     rng = MersenneTwister(0)
     N = 8
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
-    T = BigFloat
     J = randn(rng, ne(g))
     h = randn(rng, nv(g))
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
-    f = zeros(N)
+    f = init_free_energy(bp)
     iterate!(bp; maxiter=20, f, tol=0)
     b = beliefs(bp)
     b_ex = exact_marginals(bp)
@@ -55,11 +54,11 @@ end
     h = randn(rng, nv(g))
     β = rand(rng)
     ising = Ising(g, J, h, β)
-    bp = BP(ising)
-    f = zeros(N)
-    iterate_ms!(bp; maxiter=20, f, tol=0)
-    e = avg_energy(avg_energy_ms, bp)
-    e_ex = exact_minimum_energy(bp)
+    ms = BP(ising)
+    f = init_free_energy(ms)
+    iterate_ms!(ms; maxiter=20, f, tol=0)
+    e = avg_energy(avg_energy_ms, ms)
+    e_ex = exact_minimum_energy(ms)
     @test e ≈ e_ex
     @test e ≈ sum(f)
 end
@@ -73,7 +72,7 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = fast_ising_bp(ising)
-    f = zeros(N)
+    f = init_free_energy(bp)
     iterate!(bp; maxiter=50, f, tol=1e-10)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
@@ -97,7 +96,7 @@ end
     ψ = IsingCoupling.(J)
     ϕ = IsingField.(h)
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
-    f = zeros(n)
+    f = init_free_energy(bp)
     iterate!(bp; maxiter=10, tol=0.0, f)
     test_observables(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
@@ -109,7 +108,7 @@ end
         ψ_generic = [BPFactor(ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
         ϕ_generic = [BPFactor(ϕ[i], (2,)) for i in variables(g)]
         bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
-        f = zeros(n)
+        f = init_free_energy(bp)
         iterate!(bp_generic; maxiter=10, tol=0.0, f)
         test_observables(bp_generic)
         @test sum(f) ≈ bethe_free_energy(bp_generic)
@@ -117,9 +116,10 @@ end
 
     ms = bp
     ms_fast = bp_fast
-    iterate_ms!(ms; maxiter=10, tol=0.0)
-    f = zeros(n)
-    iterate_ms!(ms_fast; maxiter=10, tol=0.0, f)
+    f = init_free_energy(ms)
+    iterate_ms!(ms; maxiter=10, tol=0.0, f)
+    f_fast = init_free_energy(ms_fast)
+    iterate_ms!(ms_fast; maxiter=10, tol=0.0, f=f_fast)
     @test beliefs_ms(ms) ≈ beliefs_ms(ms_fast)
     @test factor_beliefs_ms(ms) ≈ factor_beliefs_ms(ms_fast)
     @test sum(f) ≈ bethe_free_energy_ms(ms_fast)
@@ -136,12 +136,16 @@ end
     ϕ = [IsingField(h)]
     bp = BP(g, ψ, 2; ϕ)
     bp = fast_ising_bp(g, ψ, ϕ)
-    iterate!(bp; maxiter=100, tol=1e-12)
+    f = init_free_energy(bp)
+    iterate!(bp; maxiter=100, tol=1e-12, f)
+    @test sum(f) ≈ bethe_free_energy(bp)
 
     using Graphs
     g2 = pairwise_interaction_graph(IndexedGraph(complete_graph(4)))
     bp2 = fast_ising_bp(g2, fill(IsingCoupling(J), 6), fill(IsingField(h), 4))
-    iterate!(bp2; maxiter=100, tol=1e-12)
+    f2 = init_free_energy(bp2)
+    iterate!(bp2; maxiter=100, tol=1e-12, f=f2)
+    @test sum(f2) ≈ bethe_free_energy(bp2)
 
     @test all(beliefs(bp)[1] ≈ beliefs(bp2)[i] for i in 1:4)
     @test all(factor_beliefs(bp)[1] ≈ factor_beliefs(bp2)[ij] for ij in 1:6)
