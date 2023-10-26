@@ -13,17 +13,18 @@ end
 (f::IsingField)(x) = exp(f.βh * potts2spin(only(x)))
 
 # Ising model with xᵢ ∈ {1,2} mapped onto spins {+1,-1}
-struct Ising{T<:Real}
-    g :: IndexedGraph{Int}
-    J :: Vector{T}
-    h :: Vector{T}
-    β :: T
+struct Ising{TJ<:Real, Th<:Real, Tβ<:Real, Tg<:Integer}
+    g :: IndexedGraph{Tg}
+    J :: Vector{TJ}
+    h :: Vector{Th}
+    β :: Tβ
 
-    function Ising(g::IndexedGraph{Int}, J::Vector{T}, h::Vector{T}, β::T=1.0) where {T<:Real}
+    function Ising(g::IndexedGraph{Tg}, J::Vector{TJ}, h::Vector{Th}, β::Tβ=1) where 
+            {TJ<:Real, Th<:Real, Tβ<:Real, Tg<:Integer}
         @assert length(J) == ne(g)
         @assert length(h) == nv(g)
         @assert β ≥ 0
-        new{T}(g, J, h, β)
+        new{TJ, Th, Tβ, Tg}(g, J, h, β)
     end
 end
 
@@ -75,41 +76,38 @@ end
 
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...)
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     cout, cfull = cavity(2cosh.(u[ei]), *, one(eltype(bp)))
-    d = (degree(g, factor(a)) for a in ∂i)
+    errb = abs(bnew[i] - b[i])
+    logzᵢ = log(2cosh(bnew[i]) / cfull)
+    f.variables[i] -= logzᵢ
+    b[i] = bnew[i]
     errv = -Inf
-    for (ia, dₐ, c) in zip(ei, d, cout)
-        zᵢ₂ₐ = 2cosh(hnew[ia]) / c
-        f[i] -= log(zᵢ₂ₐ) * (1 - 1/dₐ)
+    for (ia, c) in zip(ei, cout)
+        logzᵢ₂ₐ = log(2cosh(hnew[ia]) / c)
+        f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
         errv = max(errv, abs(hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = abs(bnew[i] - b[i])
-    zᵢ = 2cosh(bnew[i]) / cfull
-    f[i] -= log(zᵢ) * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
-    b[i] = bnew[i]
     return errv, errb
 end
 
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::AtomicVector{<:Real}; extra_kwargs...)
+        unew, damp::Real, f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    @views cavity!(unew[ea], tanh.(h[ea]), *, one(eltype(bp)))
+    @views Πtanhh = cavity!(unew[ea], tanh.(h[ea]), *, one(eltype(bp)))
     unew[ea] .= atanh.(tanh(Jₐ) .* unew[ea])
-    dₐ = degree(g, factor(a))
+    zₐ = cosh(Jₐ) * (1 + tanh(Jₐ) * Πtanhh)
+    f.factors[a] -= log(zₐ)
     err = -Inf
-    for (i, ai) in zip(∂a, ea)
-        zₐ₂ᵢ = 2cosh(Jₐ)
-        f[i] -= log(zₐ₂ᵢ) / dₐ
+    for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
@@ -141,42 +139,39 @@ end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...)
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     cout, cfull = cavity(abs.(u[ei]), +, 0.0)
-    d = (degree(g, factor(a)) for a in ∂i)
+    errb = abs(bnew[i] - b[i])
+    logzᵢ = abs(bnew[i]) - cfull
+    f.variables[i] -= logzᵢ
+    b[i] = bnew[i]
     errv = -Inf
-    for (ia, dₐ, c) in zip(ei, d, cout)
-        fᵢ₂ₐ = abs(hnew[ia]) - c
-        f[i] -= fᵢ₂ₐ * (1 - 1/dₐ)
+    for (ia, c) in zip(ei, cout)
+        logzᵢ₂ₐ = abs(hnew[ia]) - c
+        f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
         errv = max(errv, abs(hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    errb = abs(bnew[i] - b[i])
-    fᵢ = abs(bnew[i]) - cfull
-    f[i] -= fᵢ * (1 - degree(g, variable(i)) + sum(1/dₐ for dₐ in d; init=0.0))
-    b[i] = bnew[i]
     return errv, errb
 end
 
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::AtomicVector{<:Real}; extra_kwargs...)
+        unew, damp::Real, f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    @views cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
-    signs, = cavity(sign.(h[ea]), *, sign(Jₐ))
+    @views minh = cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
+    signs, prodsigns = cavity(sign.(h[ea]), *, sign(Jₐ))
     unew[ea] .= signs .* unew[ea]
-    dₐ = degree(g, factor(a))
+    logzₐ = abs(Jₐ) - 2min(abs(Jₐ), minh)*(prodsigns!=1)
+    f.factors[a] -= logzₐ
     err = -Inf
-    for (i, ai, s) in zip(∂a, ea, signs)
-        fₐ₂ᵢ = abs(Jₐ)
-        f[i] -= fₐ₂ᵢ / dₐ
+    for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
