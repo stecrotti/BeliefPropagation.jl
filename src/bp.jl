@@ -91,28 +91,28 @@ nstates(bp::BP, i::Integer) = length(bp.b[i])
 
 Return single-variable beliefs {bᵢ(xᵢ)}ᵢ.
 """
-beliefs(f, bp::BP) = f(bp)
+beliefs(f::Function, bp::BP) = f(bp)
 
 """
     factor_beliefs([f], bp::BP)
 
 Return factor beliefs {bₐ(xₐ)}ₐ.
 """
-factor_beliefs(f, bp::BP) = f(bp)
+factor_beliefs(f::Function, bp::BP) = f(bp)
 
 """
     avg_energy([f], bp::BP)
 
 Return the average energy ∑ₐ∑ₓₐbₐ(xₐ)[-logψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)[-logϕᵢ(xᵢ)]
 """
-avg_energy(f, bp::BP; kwargs...) = f(bp; kwargs...)
+avg_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
 
 """
     bethe_free_energy([f], bp::BP)
 
 Return the bethe free energy ∑ₐ∑ₓₐbₐ(xₐ)log[bₐ(xₐ)/ψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)log[bᵢ(xᵢ)^(1-|∂i|)/ϕᵢ(xᵢ)]
 """
-bethe_free_energy(f, bp::BP; kwargs...) = f(bp; kwargs...)
+bethe_free_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
 
 beliefs_bp(bp::BP) = bp.b
 beliefs(bp::BP) = beliefs(beliefs_bp, bp)
@@ -224,6 +224,21 @@ function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
     maximum(errb) < check_convergence.tol
 end
 
+struct BetheFreeEnergy{T<:AbstractVector{<:Real}}
+    factors   :: T
+    variables :: T
+    edges     :: T
+end
+function init_free_energy(bp::BP)
+    T = eltype(bp)
+    a = zeros(T, nfactors(bp.g))
+    i = zeros(T, nvariables(bp.g))
+    ai = zeros(T, ne(bp.g))
+    return BetheFreeEnergy(a, i, ai)
+end
+Base.length(::BetheFreeEnergy) = 3
+Base.iterate(f::BetheFreeEnergy, args...) = iterate((f.factors, f.variables, f.edges), args...)
+
 """
     iterate!(bp::BP; kwargs...)
 
@@ -245,7 +260,7 @@ Optional arguments
 """
 function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        f::AbstractVector{<:Real} = zeros(eltype(bp), 2),
+        f::BetheFreeEnergy = init_free_energy(bp),
         callback = (bp, errv, errf, errb, it, f) -> nothing,
         check_convergence=message_convergence(tol),
         extra_kwargs...
@@ -255,9 +270,9 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
     errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
-    ff = AtomicVector(f)
+    ff = BetheFreeEnergy(map(AtomicVector, f)...)
     for it in 1:maxiter
-        ff .= 0
+        foreach(x -> x .= 0, ff)
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
@@ -288,32 +303,31 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
 end
 
 function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...) where {
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
         F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
-    ∂i = neighbors(g, variable(i))
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
-    d = (degree(g, factor(a)) for a in ∂i)
-    errv = -Inf
-    for (ia, dₐ) in zip(ei, d)
-        zᵢ₂ₐ = sum(hnew[ia])
-        hnew[ia] ./= zᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
-        h[ia] = damp!(h[ia], hnew[ia], damp)
-    end
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
     errb = mean(abs, bnew[i] - b[i])
-    f[2] -= log(zᵢ)
+    f.variables[i] -= log(zᵢ)
     b[i] = bnew[i]
+    errv = -Inf
+    for ia in ei
+        zᵢ₂ₐ = sum(hnew[ia])
+        hnew[ia] ./= zᵢ₂ₐ
+        f.edges[ia] -= log(zᵢ) - log(zᵢ₂ₐ)
+        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        h[ia] = damp!(h[ia], hnew[ia], damp)
+    end
     return errv, errb
 end
 
 function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
-        f::AtomicVector{<:Real}; extra_kwargs...) where {
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, u, h) = bp
     ∂a = neighbors(g, factor(a))
@@ -322,7 +336,7 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     for ai in ea
         unew[ai] .= 0
     end
-    zₐ = isempty(∂a) ? one(eltype(bp)) : zero(eltype(bp))
+    zₐ = zero(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] += ψₐ(xₐ) *
@@ -330,9 +344,9 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         end
         zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
     end
-    f[1] -= log(zₐ)
+    f.factors[a] -= log(zₐ)
     err = -Inf
-    for (i, ai) in zip(∂a, ea)
+    for ai in ea
         zₐ₂ᵢ = sum(unew[ai])
         unew[ai] ./= zₐ₂ᵢ
         err = max(err, mean(abs, unew[ai] - u[ai]))
@@ -340,3 +354,6 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     end
     return err
 end
+
+bethe_free_energy(f::BetheFreeEnergy) = sum(f.factors) + sum(f.variables) - sum(f.edges)
+Base.sum(f::BetheFreeEnergy) = bethe_free_energy(f)
