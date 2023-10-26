@@ -4,7 +4,7 @@ struct IsingCoupling{T<:Real}  <: BPFactor
     βJ :: T 
 end
 
-(f::IsingCoupling)(x) = exp(f.βJ * prod(potts2spin(xᵢ) for xᵢ in x))
+(f::IsingCoupling)(x) = isempty(x) ? one(eltype(f)) : exp(f.βJ * prod(potts2spin(xᵢ) for xᵢ in x))
 
 struct IsingField{T<:Real}  <: BPFactor 
     βh :: T 
