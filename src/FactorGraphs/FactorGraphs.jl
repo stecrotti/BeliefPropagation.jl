@@ -8,7 +8,7 @@ using IndexedGraphs:
     nv_left, nv_right, Left, Right
 using IndexedGraphs
 
-using Graphs: is_cyclic, prufer_decode
+using Graphs: AbstractGraph, is_cyclic, prufer_decode
 using Graphs
 
 using FillArrays: Fill
