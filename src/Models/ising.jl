@@ -42,6 +42,17 @@ function BeliefPropagation.BP(ising::Ising)
     return BP(g, ψ, qs; ϕ)
 end
 
+@doc raw"""
+    fast_ising_bp(g::AbstractFactorGraph, ψ::Vector{<:IsingCoupling}, [ϕ])
+
+Return a BP instance with Ising factors and messages and beliefs in log-ratio format:
+```math
+\begin{align*}
+	&m_{a\to i}(\sigma_i) \propto e^{u_{a\to i}\sigma_i}\\
+	&u_{a\to i} = \frac12\log\frac{m_{a\to i}(+1)}{m_{a\to i}(+1)}
+\end{align*}
+```
+"""
 function fast_ising_bp(g::AbstractFactorGraph, ψ::Vector{<:IsingCoupling},
         ϕ::Vector{<:IsingField}=fill(IsingField(0.0), nvariables(g)))
     T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
