@@ -13,17 +13,18 @@ end
 (f::IsingField)(x) = exp(f.βh * potts2spin(only(x)))
 
 # Ising model with xᵢ ∈ {1,2} mapped onto spins {+1,-1}
-struct Ising{T<:Real}
-    g :: IndexedGraph{Int}
-    J :: Vector{T}
-    h :: Vector{T}
-    β :: T
+struct Ising{TJ<:Real, Th<:Real, Tβ<:Real, Tg<:Integer}
+    g :: IndexedGraph{Tg}
+    J :: Vector{TJ}
+    h :: Vector{Th}
+    β :: Tβ
 
-    function Ising(g::IndexedGraph{Int}, J::Vector{T}, h::Vector{T}, β::T=1.0) where {T<:Real}
+    function Ising(g::IndexedGraph{Tg}, J::Vector{TJ}, h::Vector{Th}, β::Tβ=1) where 
+            {TJ<:Real, Th<:Real, Tβ<:Real, Tg<:Integer}
         @assert length(J) == ne(g)
         @assert length(h) == nv(g)
         @assert β ≥ 0
-        new{T}(g, J, h, β)
+        new{TJ, Th, Tβ, Tg}(g, J, h, β)
     end
 end
 
