@@ -18,14 +18,14 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     logzᵢ = maximum(bnew[i])
     bnew[i] .-= logzᵢ
     f.variables[i] -= logzᵢ
-    errb = mean(abs, bnew[i] - b[i])
+    errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
-    errv = -Inf
+    errv = typemin(eltype(bp))
     for ia in ei
         logzᵢ₂ₐ = maximum(hnew[ia])
         hnew[ia] .-= logzᵢ₂ₐ
         f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
-        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
@@ -38,7 +38,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
     for ai in ea
-        unew[ai] .= -Inf
+        unew[ai] .= typemin(eltype(bp))
     end
     logzₐ = typemin(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
@@ -50,11 +50,11 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
             log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
     end
     f.factors[a] -= logzₐ
-    err = -Inf
+    err = typemin(eltype(bp))
     for ai in ea
         logzₐ₂ᵢ = maximum(unew[ai])
         unew[ai] .-= logzₐ₂ᵢ
-        err = max(err, mean(abs, unew[ai] - u[ai]))
+        err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err

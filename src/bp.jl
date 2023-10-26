@@ -316,15 +316,15 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
-    errb = mean(abs, bnew[i] - b[i])
+    errb = maximum(abs, bnew[i] - b[i])
     f.variables[i] -= log(zᵢ)
     b[i] = bnew[i]
-    errv = -Inf
+    errv = typemin(eltype(bp))
     for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
         hnew[ia] ./= zᵢ₂ₐ
         f.edges[ia] -= log(zᵢ) - log(zᵢ₂ₐ)
-        errv = max(errv, mean(abs, hnew[ia] - h[ia]))
+        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
@@ -349,11 +349,11 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
     end
     f.factors[a] -= log(zₐ)
-    err = -Inf
+    err = typemin(eltype(bp))
     for ai in ea
         zₐ₂ᵢ = sum(unew[ai])
         unew[ai] ./= zₐ₂ᵢ
-        err = max(err, mean(abs, unew[ai] - u[ai]))
+        err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
