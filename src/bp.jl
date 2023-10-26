@@ -224,12 +224,37 @@ function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
     maximum(errb) < check_convergence.tol
 end
 
+
 struct BetheFreeEnergy{T<:AbstractVector{<:Real}, F<:Real}
     factors   :: T
     variables :: T
     edges     :: T
     corr      :: F
 end
+
+"""
+    init_free_energy(bp::BP)
+
+Return a `BeliefPropagation.BetheFreeEnergy` which can be used to compute the Bethe Free Energy using message normalizations. In particular, this avoids explicit computation of factor beliefs, whose cost is exponential in the factor degree.
+
+Example
+======
+```jldoctest init_free_energy
+julia> using BeliefPropagation, BeliefPropagation.FactorGraphs, BeliefPropagation.Models
+
+julia> g = rand_factor_graph(10, 15, 20);
+
+julia> ψ = IsingCoupling.(randn(nfactors(g)));
+
+julia> bp = BP(g, ψ, fill(2, nvariables(g)));
+
+julia> f = init_free_energy(bp);
+
+julia> iterate!(bp; maxiter=20, tol=1e-10, f);
+
+julia> @assert sum(f) ≈ bethe_free_energy(bp)
+```
+"""
 function init_free_energy(bp::BP)
     T = eltype(bp)
     a = zeros(T, nfactors(bp.g))

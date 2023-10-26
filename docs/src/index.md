@@ -10,5 +10,8 @@ Documentation for [BeliefPropagation](https://github.com/stecrotti/BeliefPropaga
 ```
 
 ```@autodocs
-Modules = [BeliefPropagation, BeliefPropagation.FactorGraphs]
+Modules = [BeliefPropagation,
+    BeliefPropagation.FactorGraphs,
+    BeliefPropagation.Models,
+    ]
 ```
