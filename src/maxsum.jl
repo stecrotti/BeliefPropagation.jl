@@ -13,7 +13,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
     ∂i = neighbors(g, variable(i))
-    logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
+    logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in states(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
     d = (degree(g, factor(a)) for a in ∂i)
@@ -43,7 +43,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real, f::AtomicVector{<:Re
         unew[ai] .= -Inf
     end
     
-    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+    for xₐ in Iterators.product((states(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] = max(u[ai][xₐ[i]], log(ψₐ(xₐ)) + 
                 sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
@@ -75,7 +75,7 @@ function factor_beliefs_ms(bp::BP)
         ∂a = neighbors(g, factor(a))
         ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
+        bₐ = map(Iterators.product((states(bp, i) for i in ∂a)...)) do xₐ
             log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=zero(eltype(bp)))
         end
         zₐ = maximum(bₐ)

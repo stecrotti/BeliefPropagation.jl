@@ -85,6 +85,7 @@ end
 Return the number of values taken by variable `i`.
 """
 nstates(bp::BP, i::Integer) = length(bp.b[i])
+states(bp::BP, i::Integer) = 1:nstates(bp, i)
 
 """
     beliefs([f], bp::BP)
@@ -123,7 +124,7 @@ function factor_beliefs_bp(bp::BP)
         ∂a = neighbors(g, factor(a))
         ea = edge_indices(g, factor(a))
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
+        bₐ = map(Iterators.product((states(bp, i) for i in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(h[ia][xₐ[i]...] for (i, ia) in pairs(ea); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
@@ -138,7 +139,7 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     eₐ = eᵢ = 0.0
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+        for xₐ in Iterators.product((states(bp, i) for i in ∂a)...)
             eₐ += -xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
@@ -162,7 +163,7 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     fₐ = fᵢ = 0.0
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
-        for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+        for xₐ in Iterators.product((states(bp, i) for i in ∂a)...)
             fₐ += xlogx(fb[a][xₐ...]) - xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
@@ -293,7 +294,7 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
-    ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
+    ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in states(bp, i)]
     msg_mult(m1, m2) = m1 .* m2
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
     d = (degree(g, factor(a)) for a in ∂i)
@@ -323,7 +324,7 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     for ai in ea
         unew[ai] .= 0
     end
-    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+    for xₐ in Iterators.product((states(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] += ψₐ(xₐ) * 
                 prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
