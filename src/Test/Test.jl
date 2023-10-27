@@ -12,7 +12,8 @@ using InvertedIndices: Not
 
 export exact_normalization, exact_prob, exact_marginals, exact_factor_marginals,
     exact_avg_energy, exact_minimum_energy
-export test_observables_bp, rand_bp
+export rand_factor, rand_bp
+export test_observables_bp
 
 """
     TabulatedBPFactor(f::BPFactor, states)
@@ -106,7 +107,7 @@ Examples
 
 Create a random factor connected to three variables x₁ ∈ {1,2}, x₂ ∈ {1,2,3,4}, x₃ ∈ {1,2,3}.
 ```jldoctest random_factor
-julia> using BeliefPropagation, BeliefPropagation.FactorGraphs
+julia> using BeliefPropagation.Test
 
 julia> import Random: MersenneTwister
 

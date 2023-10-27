@@ -16,7 +16,6 @@ It is used as the default for single-variable factors
 struct UniformFactor <: BPFactor; end
 (f::UniformFactor)(x) = 1
 
-# stores in an array `values` the result of evaluating the factor at all possible inputs 
 """
     TabulatedBPFactor
 
