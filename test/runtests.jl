@@ -1,7 +1,7 @@
 using BeliefPropagation
 using BeliefPropagation.FactorGraphs
 using BeliefPropagation.Models
-using BeliefPropagation.TestUtils
+using BeliefPropagation.Test
 using Test
 using Aqua
 using Graphs

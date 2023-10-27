@@ -1,4 +1,4 @@
-module TestUtils
+module Test
 
 using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
