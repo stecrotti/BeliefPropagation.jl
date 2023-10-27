@@ -18,8 +18,9 @@ include("bp.jl")
 include("maxsum.jl")
 
 include("Models/Models.jl")
+include("TestUtils/TestUtils.jl")
 
-export BPFactor, TabulatedBPFactor, rand_factor, UniformFactor
+export BPFactor, TabulatedBPFactor, UniformFactor
 export AbstractFactorGraph, FactorGraph, RegularFactorGraph, variables, factors, nvariables, 
     nfactors
 export BP, reset!, nstates, evaluate, energy

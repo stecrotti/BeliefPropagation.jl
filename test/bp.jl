@@ -32,7 +32,7 @@ end
                      0 0 1 1 0;
                      0 0 0 0 0])
     nfact, nvar = size(adjacency_matrix(g))
-    qs = rand(rng, 2:2, nvar)
+    qs = rand(rng, 2:4, nvar)
     bp = rand_bp(rng, g, qs)
     f = init_free_energy(bp)
     iterate!(bp; maxiter=50, f, damp=0.0, tol=0)
@@ -79,7 +79,7 @@ end
     f = init_free_energy(bp)
     iterate!(bp; maxiter=100, tol=0.0, f)
     b = beliefs(bp)
-    test_observables(bp)
+    test_observables_bp(bp)
     @test sum(f) ≈ bethe_free_energy(bp)
 end
 
@@ -90,5 +90,5 @@ end
     bp = rand_bp(rng, g, qs)
     iterate!(bp; maxiter=100, check_convergence=belief_convergence(1e-12))
     b = beliefs(bp)
-    test_observables(bp)
+    test_observables_bp(bp)
 end

@@ -1,4 +1,7 @@
 using BeliefPropagation
+using BeliefPropagation.FactorGraphs
+using BeliefPropagation.Models
+using BeliefPropagation.TestUtils
 using Test
 using Aqua
 using Graphs
@@ -8,13 +11,6 @@ using Random: default_rng
 using Random
 using InvertedIndices
 using ForwardDiff
-
-using BeliefPropagation
-using BeliefPropagation.FactorGraphs
-using BeliefPropagation.Models
-
-
-include("testutils.jl")
 
 @testset "Code quality (Aqua.jl)" begin
     Aqua.test_all(BeliefPropagation; ambiguities = false,)
