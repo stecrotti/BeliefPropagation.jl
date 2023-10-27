@@ -242,15 +242,17 @@ Example
 ```jldoctest init_free_energy
 julia> using BeliefPropagation, BeliefPropagation.FactorGraphs, BeliefPropagation.Models
 
-julia> g = rand_factor_graph(10, 15, 20);
+julia> using Random: MersenneTwister
 
-julia> ψ = IsingCoupling.(randn(nfactors(g)));
+julia> g = rand_factor_graph(MersenneTwister(0), 10, 15, 20);
+
+julia> ψ = IsingCoupling.(randn(MersenneTwister(0), nfactors(g)));
 
 julia> bp = BP(g, ψ, fill(2, nvariables(g)));
 
 julia> f = init_free_energy(bp);
 
-julia> iterate!(bp; maxiter=20, tol=1e-10, f);
+julia> iterate!(bp; maxiter=30, tol=1e-16, f);
 
 julia> @assert sum(f) ≈ bethe_free_energy(bp)
 ```
