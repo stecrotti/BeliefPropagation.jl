@@ -47,8 +47,6 @@ function FactorGraph(A::AbstractMatrix)
 	FactorGraph(g)
 end
 
-FactorGraph(g::AbstractIndexedGraph) = FactorGraph(BipartiteIndexedGraph(g))
-
 """
     pairwise_interaction_graph(g::IndexedGraph)
 
