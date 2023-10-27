@@ -23,7 +23,10 @@ Wraps index `i` in a container such that other functions like [`neighbors`](@ref
 """
 variable(i::Integer) = vertex(i, Variable)
 
-abstract type AbstractFactorGraph{T} end;
+abstract type AbstractFactorGraph{T} end
+
+# treat an `AbstractFactorGraph`` object as a scalar in broadcasting
+Base.broadcastable(b::AbstractFactorGraph) = Ref(b)
 
 """
     FactorGraph{T}
