@@ -13,5 +13,6 @@ Documentation for [BeliefPropagation](https://github.com/stecrotti/BeliefPropaga
 Modules = [BeliefPropagation,
     BeliefPropagation.FactorGraphs,
     BeliefPropagation.Models,
+    BeliefPropagation.Test,
     ]
 ```
