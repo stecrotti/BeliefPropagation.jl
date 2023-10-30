@@ -34,26 +34,25 @@ function UpdateFactorBP(compute_za::Function=compute_za_bp)
     end
 end
 
-# function UpdateFactorMaxsum(compute_logza::Function=compute_logza_maxsum)
-#     function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
-#             f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
-#         (; g, ψ, u, h) = bp
-#         ea = edge_indices(g, factor(a))
-#         ψₐ = ψ[a]
-#         logzₐ = compute_logza(ψₐ, h[ea])
-#         hflat = @views mortar(h[ea])
-#         uflat = @views mortar(unew[ea])
-#         ForwardDiff.gradient!(uflat, hflat -> compute_logza(ψₐ, hflat.blocks), hflat)
-#         @show unew[ea]
-#         f.factors[a] -= logzₐ
-#         err = typemin(eltype(bp))
-#         for ai in ea
-#             # unew[ai] .-= h[ai]
-#             logzₐ₂ᵢ = maximum(unew[ai])
-#             unew[ai] .-= logzₐ₂ᵢ
-#             err = max(err, maximum(abs, unew[ai] - u[ai]))
-#             u[ai] = damp!(u[ai], unew[ai], damp)
-#         end
-#         return err
-#     end
-# end
+function UpdateFactorMaxsum(compute_logza::Function=compute_logza_maxsum)
+    function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
+            f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        (; g, ψ, u, h) = bp
+        ea = edge_indices(g, factor(a))
+        ψₐ = ψ[a]
+        logzₐ = compute_logza(ψₐ, h[ea])
+        hflat = @views mortar(h[ea])
+        uflat = @views mortar(unew[ea])
+        ForwardDiff.gradient!(uflat, hflat -> compute_logza(ψₐ, hflat.blocks), hflat)
+        f.factors[a] -= logzₐ
+        err = typemin(eltype(bp))
+        for ai in ea
+            unew[ai] .= log.(unew[ai]) .- h[ai]
+            logzₐ₂ᵢ = maximum(unew[ai])
+            unew[ai] .-= logzₐ₂ᵢ
+            err = max(err, maximum(abs, unew[ai] - u[ai]))
+            u[ai] = damp!(u[ai], unew[ai], damp)
+        end
+        return err
+    end
+end

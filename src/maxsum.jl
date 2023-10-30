@@ -49,7 +49,6 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
         logzₐ = max(logzₐ, 
             log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
     end
-    @show unew[ea]
     f.factors[a] -= logzₐ
     err = typemin(eltype(bp))
     for ai in ea

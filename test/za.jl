@@ -1,4 +1,4 @@
-using BeliefPropagation: UpdateFactorBP, UpdateFactorMaxsum
+using BeliefPropagation: UpdateFactorBP#, UpdateFactorMaxsum
 
 n = 10
 rng = MersenneTwister(0)
