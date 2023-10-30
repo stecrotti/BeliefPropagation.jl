@@ -34,4 +34,8 @@ end
     include("autodiff.jl")
 end
 
+@testset "zₐ" begin
+    include("za.jl")
+end
+
 nothing

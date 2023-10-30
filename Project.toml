@@ -4,8 +4,10 @@ authors = ["stecrotti <stefano.crotti@polito.it>"]
 version = "1.0.0-DEV"
 
 [deps]
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 CavityTools = "217fe2f1-7e3d-419f-9934-cd6900c2759a"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 IndexedGraphs = "8a731c18-cfb7-4915-927e-cc26b56b67cd"
 InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
@@ -26,8 +28,10 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 FactorGraphsPlotsExt = ["Plots", "GraphRecipes"]
 
 [compat]
+BlockArrays = "0.16"
 CavityTools = "0.2.2"
 FillArrays = "1.7"
+ForwardDiff = "0.10"
 GraphRecipes = "0.5"
 Graphs = "1.9"
 IndexedGraphs = "0.4.1"

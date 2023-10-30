@@ -8,14 +8,14 @@ Base.convert(::Type{AtomicVector{T}}, v::Vector{T}) where T = AtomicVector(v)
 
 @forward AtomicVector.v Base.length, Base.iterate, Base.size
 
-function Base.getindex(a::AtomicVector, i)
+function Base.getindex(a::AtomicVector, i::Integer)
     lock(a.s)
     x = a.v[i]
     unlock(a.s)
     x
 end
 
-function Base.setindex!(a::AtomicVector, x, i)
+function Base.setindex!(a::AtomicVector, x, i::Integer)
     lock(a.s)
     a.v[i] = x
     unlock(a.s)

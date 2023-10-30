@@ -73,12 +73,11 @@ end
 
 @testset "Tree factor graph" begin
     n = 10
-    g = rand_tree_factor_graph(n)
+    g = rand_tree_factor_graph(rng, n)
     qs = rand(rng, 2:4, nvariables(g))
     bp = rand_bp(rng, g, qs)
     f = init_free_energy(bp)
     iterate!(bp; maxiter=100, tol=0.0, f)
-    b = beliefs(bp)
     test_observables_bp(bp)
     @test sum(f) ≈ bethe_free_energy(bp)
 end
