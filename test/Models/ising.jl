@@ -98,10 +98,10 @@ end
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
     f = init_free_energy(bp)
     iterate!(bp; maxiter=10, tol=0.0, f)
-    test_observables(bp)
+    test_observables_bp(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
     iterate!(bp_fast; maxiter=10, tol=0.0)
-    test_observables(bp_fast)
+    test_observables_bp(bp_fast)
     @test sum(f) ≈ bethe_free_energy(bp)
 
     @testset "Generic BP factor" begin
@@ -110,7 +110,7 @@ end
         bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
         f = init_free_energy(bp)
         iterate!(bp_generic; maxiter=10, tol=0.0, f)
-        test_observables(bp_generic)
+        test_observables_bp(bp_generic)
         @test sum(f) ≈ bethe_free_energy(bp_generic)
     end
 

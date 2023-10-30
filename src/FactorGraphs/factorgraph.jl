@@ -23,7 +23,10 @@ Wraps index `i` in a container such that other functions like [`neighbors`](@ref
 """
 variable(i::Integer) = vertex(i, Variable)
 
-abstract type AbstractFactorGraph{T} end;
+abstract type AbstractFactorGraph{T} end
+
+# treat an `AbstractFactorGraph`` object as a scalar in broadcasting
+Base.broadcastable(b::AbstractFactorGraph) = Ref(b)
 
 """
     FactorGraph{T}
@@ -43,8 +46,6 @@ function FactorGraph(A::AbstractMatrix)
     g = BipartiteIndexedGraph(SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, fill(NullNumber(), length(A.nzval))))
 	FactorGraph(g)
 end
-
-FactorGraph(g::AbstractIndexedGraph) = FactorGraph(BipartiteIndexedGraph(g))
 
 """
     pairwise_interaction_graph(g::IndexedGraph)
