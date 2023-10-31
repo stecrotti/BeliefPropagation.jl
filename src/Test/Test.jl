@@ -105,8 +105,9 @@ Return a random `BPFactor` whose domain is specified by the iterable `states`.
 Examples
 ========
 
-Create a random factor connected to three variables x₁ ∈ {1,2}, x₂ ∈ {1,2,3,4}, x₃ ∈ {1,2,3}.
-```jldoctest random_factor
+Create a random factor connected to three variables ``x_1 \\in \\{1,2\\}, x_2 \\in \\{1,2,3,4\\}, x_3 \\in \\{1,2,3\\}``.
+
+```jldoctest rand_factor
 julia> using BeliefPropagation.Test
 
 julia> import Random: MersenneTwister

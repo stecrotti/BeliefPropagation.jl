@@ -1,12 +1,18 @@
 using BeliefPropagation
 using Documenter
 
+# for package extension
+using Plots, GraphRecipes
+
 DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup, 
     :(using BeliefPropagation); recursive=true)
 
 makedocs(;
-    modules=[BeliefPropagation],
-    authors="stecrotti <stefano.crotti@polito.it>",
+    modules=[
+        BeliefPropagation,
+        Base.get_extension(BeliefPropagation, :FactorGraphsPlotsExt),
+    ],
+    authors="Stefano Crotti, Alfredo Braunstein, and contributors",
     repo="https://github.com/stecrotti/BeliefPropagation.jl/blob/{commit}{path}#{line}",
     sitename="BeliefPropagation.jl",
     format=Documenter.HTML(;
@@ -23,4 +29,5 @@ makedocs(;
 deploydocs(;
     repo="github.com/stecrotti/BeliefPropagation.jl",
     devbranch="main",
+    push_preview=true,
 )

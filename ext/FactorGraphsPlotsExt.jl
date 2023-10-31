@@ -7,16 +7,17 @@ using Plots, GraphRecipes
     plot(g::FactorGraph; kwargs...)
 
 Plot factor graph `g` with boxes for factor nodes and circles for variable nodes.
+It is based on [`GraphRecipes.graphplot`](https://docs.juliaplots.org/stable/GraphRecipes/introduction/#Usage).
 
 Optional arguments
 ========
 - `shownames`: if set to `true`, displays the index on every node
-- optional arguments to [`GraphRecipes.graphplot`](https://docs.juliaplots.org/stable/GraphRecipes/introduction/#Usage)
+- optional arguments to `graphplot`
 
 Examples
 ========
 
-```jldoctest plot
+```@example plot
 julia> using BeliefPropagation.FactorGraphs
 
 julia> using Plots, GraphRecipes
