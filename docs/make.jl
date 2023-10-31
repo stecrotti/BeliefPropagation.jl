@@ -1,3 +1,12 @@
+# from https://github.com/JuliaManifolds/Manifolds.jl/blob/71cd2aa54591ee35cdbb45af9c810c5c3704e60c/docs/make.jl#L8
+if Base.active_project() != joinpath(@__DIR__, "Project.toml")
+    using Pkg
+    Pkg.activate(@__DIR__)
+    Pkg.develop(PackageSpec(; path=(@__DIR__) * "/../"))
+    Pkg.resolve()
+    Pkg.instantiate()
+end
+
 using BeliefPropagation
 using Documenter
 
