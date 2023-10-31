@@ -23,7 +23,7 @@ GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [extensions]
-FactorGraphsPlotsExt = ["Plots"]
+FactorGraphsPlotsExt = ["Plots", "GraphRecipes"]
 
 [compat]
 CavityTools = "0.2.2"
@@ -37,7 +37,3 @@ LogExpFunctions = "0.3"
 Plots = "1.39"
 StatsBase = "0.34"
 julia = "1.9"
-
-[extras]
-GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
