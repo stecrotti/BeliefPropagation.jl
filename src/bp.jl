@@ -89,28 +89,34 @@ nstates(bp::BP, i::Integer) = length(bp.b[i])
 """
     beliefs([f], bp::BP)
 
-Return single-variable beliefs {bᵢ(xᵢ)}ᵢ.
+Return single-variable beliefs ``\\{b_i(x_i)\\}_i``.
 """
 beliefs(f::Function, bp::BP) = f(bp)
 
 """
     factor_beliefs([f], bp::BP)
 
-Return factor beliefs {bₐ(xₐ)}ₐ.
+Return factor beliefs ``\\{b_a(\\underline{x}_a)\\}_a``.
 """
 factor_beliefs(f::Function, bp::BP) = f(bp)
 
-"""
+@doc raw"""
     avg_energy([f], bp::BP)
 
-Return the average energy ∑ₐ∑ₓₐbₐ(xₐ)[-logψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)[-logϕᵢ(xᵢ)]
+Return the average energy
+```math
+\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\phi_i(x_i)\right]
+```
 """
 avg_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
 
-"""
+@doc raw"""
     bethe_free_energy([f], bp::BP)
 
-Return the bethe free energy ∑ₐ∑ₓₐbₐ(xₐ)log[bₐ(xₐ)/ψₐ(xₐ)] + ∑ᵢ∑ₓᵢbᵢ(xᵢ)log[bᵢ(xᵢ)^(1-|∂i|)/ϕᵢ(xᵢ)]
+Return the bethe free energy
+```math
+\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\frac{b_a(\underline{x}_a)}{\psi_a(\underline{x}_a)}\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\frac{b_i(x_i)^{1-\lvert\partial i\rvert}}{\phi_i(x_i)}\right]
+```
 """
 bethe_free_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
 
@@ -178,10 +184,14 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
-"""
+@doc raw"""
     energy(bp::BP, x)
 
-Return the energy ∑ₐ[-logψₐ(xₐ)] + ∑ᵢ[-logϕᵢ(xᵢ)] of configuration `x`.
+Return the energy
+```math
+\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left[-\log\phi_i(x_i)\right]
+```
+of configuration `x`.
 """
 function energy(bp::BP, x)
     (; g, ψ, ϕ) = bp
@@ -199,7 +209,7 @@ end
 """
     evaluate(bp::BP, x)
 
-Return the unnormalized probability ∏ₐψₐ(xₐ)∏ᵢϕᵢ(xᵢ) of configuration `x`.
+Return the unnormalized probability ``\\prod_a\\psi_a(\\underline{x}_a)\\prod_i\\phi_i(x_i)`` of configuration `x`.
 """
 evaluate(bp::BP, x) = exp(-energy(bp, x))
 
