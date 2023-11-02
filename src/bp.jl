@@ -394,7 +394,7 @@ end
 function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
-    (; g, ψ, u, h) = bp
+    (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
     zₐ = compute_za(ψₐ, h[ea])
