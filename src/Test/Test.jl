@@ -159,9 +159,9 @@ end
 function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
         f::BeliefPropagation.BetheFreeEnergy{<:BeliefPropagation.AtomicVector}; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
-    (; g, ψ, u, h) = bp
+    (; g, ψ, h) = bp
     ∂a = neighbors(g, factor(a))
-    ea = edge_indices(g, factor(a))
+    ea = BeliefPropagation.FactorGraphs.edge_indices(g, factor(a))
     ψₐ = ψ[a]
     for ai in ea
         unew[ai] .= 0
