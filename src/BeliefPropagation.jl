@@ -18,7 +18,6 @@ include("bpfactor.jl")
 include("atomic_vector.jl")
 include("bp.jl")
 include("maxsum.jl")
-include("za.jl")
 
 include("Models/Models.jl")
 include("Test/Test.jl")

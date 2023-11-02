@@ -343,20 +343,14 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
     return x
 end
 
-function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-        F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
-    (; g, ϕ, u, h, b) = bp
-    ei = edge_indices(g, variable(i)) 
-    ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
-    msg_mult(m1, m2) = m1 .* m2
-    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
+function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
+    (; h, b) = bp
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
     errb = maximum(abs, bnew[i] - b[i])
     f.variables[i] -= log(zᵢ)
     b[i] = bnew[i]
-    errv = typemin(eltype(bp))
+    errv = zero(eltype(bp))
     for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
         hnew[ia] ./= zᵢ₂ₐ
@@ -367,31 +361,47 @@ function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rei
     return errv, errb
 end
 
-function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
+function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
-    (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
-    ea = edge_indices(g, factor(a))
-    ψₐ = ψ[a]
-    for ai in ea
-        unew[ai] .= 0
-    end
-    zₐ = zero(eltype(bp))
-    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-        for (i, ai) in pairs(ea)
-            unew[ai][xₐ[i]] += ψₐ(xₐ) *
-                prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
-        end
-        zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
-    end
-    f.factors[a] -= log(zₐ)
-    err = typemin(eltype(bp))
+        F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+    (; g, ϕ, u, b) = bp
+    ei = edge_indices(g, variable(i)) 
+    ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
+    msg_mult(m1, m2) = m1 .* m2
+    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
+    errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
+    return errv, errb
+end
+
+function compute_za(ψₐ, msg_in)
+    isempty(msg_in) && return one(eltype(ψₐ))
+    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
+        for xₐ in Iterators.product(eachindex.(msg_in)...))
+end
+
+function set_messages_factor!(bp, ea, unew, damp)
+    u = bp.u
+    err = zero(eltype(bp))
     for ai in ea
         zₐ₂ᵢ = sum(unew[ai])
         unew[ai] ./= zₐ₂ᵢ
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
+    return err
+end
+
+function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
+            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+    (; g, ψ, u, h) = bp
+    ea = edge_indices(g, factor(a))
+    ψₐ = ψ[a]
+    zₐ = compute_za(ψₐ, h[ea])
+    hflat = @views mortar(h[ea])
+    uflat = @views mortar(unew[ea])
+    ForwardDiff.gradient!(uflat, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    f.factors[a] -= log(zₐ)
+    err = set_messages_factor!(bp, ea, unew, damp)
     return err
 end
