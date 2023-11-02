@@ -156,4 +156,27 @@ function test_observables_bp(bp::BP; kwargs...)
     @test isapprox(exp(-bethe_free_energy_bp(bp)), exact_normalization(bp); kwargs...)
 end
 
+function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
+        f::BeliefPropagation.BetheFreeEnergy{<:BeliefPropagation.AtomicVector}; extra_kwargs...) where {
+            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+    (; g, ψ, h) = bp
+    ∂a = neighbors(g, factor(a))
+    ea = BeliefPropagation.FactorGraphs.edge_indices(g, factor(a))
+    ψₐ = ψ[a]
+    for ai in ea
+        unew[ai] .= 0
+    end
+    zₐ = zero(eltype(bp))
+    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
+        for (i, ai) in pairs(ea)
+            unew[ai][xₐ[i]] += ψₐ(xₐ) *
+                prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
+        end
+        zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
+    end
+    f.factors[a] -= log(zₐ)
+    err = BeliefPropagation.set_messages_factor!(bp, ea, unew, damp)
+    return err
+end
+
 end # module
