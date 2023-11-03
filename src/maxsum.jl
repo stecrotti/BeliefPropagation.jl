@@ -42,7 +42,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
     logzₐ = typemin(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
-            unew[ai][xₐ[i]] = max(u[ai][xₐ[i]], log(ψₐ(xₐ)) + 
+            unew[ai][xₐ[i]] = max(unew[ai][xₐ[i]], log(ψₐ(xₐ)) + 
                 sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
         end
         logzₐ = max(logzₐ, 
