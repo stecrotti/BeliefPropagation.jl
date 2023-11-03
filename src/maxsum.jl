@@ -5,7 +5,7 @@ Runs the max-sum algorithm (BP at zero temperature).
 """
 function iterate_ms!(bp::BP; kwargs...) 
     return iterate!(bp; update_variable! = update_v_ms!, update_factor! = update_f_ms!,
-        kwargs...)
+        compute_fai! = compute_fai_ms!, kwargs...)
 end
 
 function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
@@ -17,14 +17,13 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
     logzᵢ = maximum(bnew[i])
     bnew[i] .-= logzᵢ
-    f.variables[i] -= logzᵢ
+    f.variables[i] = -logzᵢ
     errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     errv = typemin(eltype(bp))
     for ia in ei
         logzᵢ₂ₐ = maximum(hnew[ia])
         hnew[ia] .-= logzᵢ₂ₐ
-        f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
@@ -49,7 +48,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
         logzₐ = max(logzₐ, 
             log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
     end
-    f.factors[a] -= logzₐ
+    f.factors[a] = -logzₐ
     err = typemin(eltype(bp))
     for ai in ea
         logzₐ₂ᵢ = maximum(unew[ai])
@@ -91,7 +90,7 @@ function avg_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
         xmax = argmax(bₐ) |> Tuple
         eₐ -= log(ψ[a](xmax)) 
     end
-    eₐ *= _free_energy_correction(bp)
+    eₐ *= _free_energy_correction_factors(bp)
     for i in variables(g)
         bᵢ = b[i]
         xmax = argmax(bᵢ)
@@ -102,4 +101,12 @@ end
 
 function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     return avg_energy_ms(bp; fb, b)
+end
+
+function compute_fai_ms!(f::BetheFreeEnergy, bp::BPGeneric)
+    fai = f.edges
+    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
+        fai[ai] = -maximum(uaix + hiax for(uaix, hiax) in zip(uai, hia)) 
+    end
+    return nothing
 end

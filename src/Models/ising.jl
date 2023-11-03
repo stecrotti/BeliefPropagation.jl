@@ -90,18 +90,14 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
         f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
-    ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
-    cout, cfull = cavity(2cosh.(u[ei]), *, one(eltype(bp)))
     errb = abs(bnew[i] - b[i])
-    logzᵢ = log(2cosh(bnew[i]) / cfull)
-    f.variables[i] -= logzᵢ
+    logzᵢ = log(2cosh(bnew[i]) / prod(2cosh(uai) for uai in u[ei]; init=one(eltype(bp))))
+    f.variables[i] = -logzᵢ
     b[i] = bnew[i]
     errv = -Inf
-    for (ia, c) in zip(ei, cout)
-        logzᵢ₂ₐ = log(2cosh(hnew[ia]) / c)
-        f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
+    for ia in ei
         errv = max(errv, abs(hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
@@ -116,7 +112,7 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     @views Πtanhh = cavity!(unew[ea], tanh.(h[ea]), *, one(eltype(bp)))
     unew[ea] .= atanh.(tanh(Jₐ) .* unew[ea])
     zₐ = cosh(Jₐ) * (1 + tanh(Jₐ) * Πtanhh)
-    f.factors[a] -= log(zₐ)
+    f.factors[a] = -log(zₐ)
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
@@ -148,6 +144,14 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     end
 end
 
+function BeliefPropagation.compute_fai_bp!(f::BetheFreeEnergy, bp::BPIsing)
+    fai = f.edges
+    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
+        fai[ai] = -log((1 + tanh(uai)*tanh(hia)) / 2)
+    end
+    return nothing
+end
+
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
@@ -159,12 +163,10 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
     cout, cfull = cavity(abs.(u[ei]), +, 0.0)
     errb = abs(bnew[i] - b[i])
     logzᵢ = abs(bnew[i]) - cfull
-    f.variables[i] -= logzᵢ
+    f.variables[i] = -logzᵢ
     b[i] = bnew[i]
     errv = -Inf
-    for (ia, c) in zip(ei, cout)
-        logzᵢ₂ₐ = abs(hnew[ia]) - c
-        f.edges[ia] -= logzᵢ - logzᵢ₂ₐ
+    for ia in ei
         errv = max(errv, abs(hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
@@ -180,7 +182,7 @@ function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
     signs, prodsigns = cavity(sign.(h[ea]), *, sign(Jₐ))
     unew[ea] .= signs .* unew[ea]
     logzₐ = abs(Jₐ) - 2min(abs(Jₐ), minh)*(prodsigns!=1)
-    f.factors[a] -= logzₐ
+    f.factors[a] = -logzₐ
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
@@ -207,4 +209,12 @@ function BeliefPropagation.factor_beliefs_ms(bp::BPIsing)
         bₐ .-= zₐ
         bₐ
     end
+end
+
+function BeliefPropagation.compute_fai_ms!(f::BetheFreeEnergy, bp::BPIsing)
+    fai = f.edges
+    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
+        fai[ai] = abs(uai) + abs(hia) - abs(uai + hia)
+    end
+    return nothing
 end
