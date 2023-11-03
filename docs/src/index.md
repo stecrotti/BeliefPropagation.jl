@@ -14,6 +14,5 @@ Modules = [BeliefPropagation,
     BeliefPropagation.FactorGraphs,
     BeliefPropagation.Models,
     BeliefPropagation.Test,
-    Base.get_extension(BeliefPropagation, :FactorGraphsPlotsExt),
     ]
 ```
