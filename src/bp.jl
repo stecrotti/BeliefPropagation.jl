@@ -63,6 +63,9 @@ function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
     return BP(g, ψ, ϕ, u, h, b)
 end
 
+# BP where messages are vectors of reals
+const BPGeneric = BP{<:BPFactor, <:BPFactor, <:AbstractVector{<:Real}, <:AbstractVector{<:Real}, <:AbstractFactorGraph}
+
 # treat a BP object as a scalar in broadcasting
 Base.broadcastable(b::BP) = Ref(b)
 
@@ -326,6 +329,10 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     return maxiter
 end
 
+function compute_zai(bp::BP)
+
+end
+
 function damp!(x::Real, xnew::Real, damp::Real)
     0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
     damp == 0 && return xnew
@@ -361,9 +368,8 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     return errv, errb
 end
 
-function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-        F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real,
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -391,9 +397,8 @@ function set_messages_factor!(bp, ea, unew, damp)
     return err
 end
 
-function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
