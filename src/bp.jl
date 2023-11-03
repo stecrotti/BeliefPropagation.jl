@@ -63,6 +63,9 @@ function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
     return BP(g, ψ, ϕ, u, h, b)
 end
 
+# BP where messages are vectors of reals
+const BPGeneric = BP{<:BPFactor, <:BPFactor, <:AbstractVector{<:Real}, <:AbstractVector{<:Real}, <:AbstractFactorGraph}
+
 # treat a BP object as a scalar in broadcasting
 Base.broadcastable(b::BP) = Ref(b)
 
@@ -148,7 +151,7 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
             eₐ += -xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
-    eₐ *= _free_energy_correction(bp)
+    eₐ *= _free_energy_correction_factors(bp)
     for i in variables(g)
         for xᵢ in eachindex(b[i])
             eₐ += -xlogy(b[i][xᵢ], ϕ[i](xᵢ))
@@ -158,10 +161,12 @@ function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
 end
 avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 
-_free_energy_correction(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1.0
+_free_energy_correction_factors(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1
+_free_energy_correction_edges(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1
 
 const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:RegularFactorGraph}
-_free_energy_correction(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
+_free_energy_correction_factors(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
+_free_energy_correction_edges(bp::BPRegular) = bp.g.kᵢ
 
 function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
@@ -172,7 +177,7 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
             fₐ += xlogx(fb[a][xₐ...]) - xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
-    fₐ *= _free_energy_correction(bp)
+    fₐ *= _free_energy_correction_factors(bp)
 
     for i in variables(g)
         dᵢ = degree(g, variable(i))
@@ -235,11 +240,12 @@ function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
 end
 
 
-struct BetheFreeEnergy{T<:AbstractVector{<:Real}, F<:Real}
-    factors   :: T
-    variables :: T
-    edges     :: T
-    corr      :: F
+struct BetheFreeEnergy{T<:AbstractVector{<:Real}, TF<:Real, TE<:Real}
+    factors         :: T
+    variables       :: T
+    edges           :: T
+    corr_factors    :: TF
+    corr_edges      :: TE
 end
 
 """
@@ -272,12 +278,15 @@ function init_free_energy(bp::BP)
     a = zeros(T, nfactors(bp.g))
     i = zeros(T, nvariables(bp.g))
     ai = zeros(T, ne(bp.g))
-    return BetheFreeEnergy(a, i, ai, _free_energy_correction(bp))
+    return BetheFreeEnergy(a, i, ai, 
+        _free_energy_correction_factors(bp), _free_energy_correction_edges(bp))
 end
 Base.length(::BetheFreeEnergy) = 3
 Base.iterate(f::BetheFreeEnergy, args...) = iterate((f.factors, f.variables, f.edges), args...)
 
-bethe_free_energy(f::BetheFreeEnergy) = f.corr * sum(f.factors) + sum(f.variables) - sum(f.edges)
+function bethe_free_energy(f::BetheFreeEnergy)
+    return f.corr_factors * sum(f.factors) + sum(f.variables) - f.corr_edges * sum(f.edges)
+end
 Base.sum(f::BetheFreeEnergy) = bethe_free_energy(f)
 
 """
@@ -299,7 +308,10 @@ Optional arguments
 - `check_convergence`: a function that checks if convergence has been reached
 - extra arguments to be passed to custom `update_variable!` and `update_factor!`
 """
-function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = update_f_bp!,
+function iterate!(bp::BP;
+        update_variable! = update_v_bp!,
+        update_factor! = update_f_bp!,
+        compute_fai! = compute_fai_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
         f::BetheFreeEnergy = init_free_energy(bp),
         callback = (bp, errv, errf, errb, it, f) -> nothing,
@@ -311,9 +323,9 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
     errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
-    ff = BetheFreeEnergy(map(AtomicVector, f)..., f.corr)
+    ff = BetheFreeEnergy(map(AtomicVector, f)..., f.corr_factors, f.corr_edges)
     for it in 1:maxiter
-        foreach(x -> x .= 0, ff)
+        compute_fai!(ff, bp)
         @threads for a in factors(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp, ff; extra_kwargs...)
         end
@@ -324,6 +336,14 @@ function iterate!(bp::BP; update_variable! = update_v_bp!, update_factor! = upda
         check_convergence(bp, errv, errf, errb) && return it
     end
     return maxiter
+end
+
+function compute_fai_bp!(f::BetheFreeEnergy, bp::BPGeneric)
+    fai = f.edges
+    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
+        fai[ai] = -log(sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))) 
+    end
+    return nothing
 end
 
 function damp!(x::Real, xnew::Real, damp::Real)
@@ -348,22 +368,19 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
     errb = maximum(abs, bnew[i] - b[i])
-    f.variables[i] -= log(zᵢ)
+    f.variables[i] = -log(zᵢ)
     b[i] = bnew[i]
     errv = zero(eltype(bp))
     for ia in ei
-        zᵢ₂ₐ = sum(hnew[ia])
-        hnew[ia] ./= zᵢ₂ₐ
-        f.edges[ia] -= log(zᵢ) - log(zᵢ₂ₐ)
+        hnew[ia] ./= sum(hnew[ia])
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
 
-function update_v_bp!(bp::BP{F,FV,M,MB}, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-        F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real,
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -383,17 +400,15 @@ function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
     err = zero(eltype(bp))
     for ai in ea
-        zₐ₂ᵢ = sum(unew[ai])
-        unew[ai] ./= zₐ₂ᵢ
+        unew[ai] ./= sum(unew[ai])
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
 end
 
-function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...) where {
-            F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
+function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
+        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
     (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
@@ -401,7 +416,7 @@ function update_f_bp!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
     ForwardDiff.gradient!(uflat, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
-    f.factors[a] -= log(zₐ)
+    f.factors[a] = -log(zₐ)
     err = set_messages_factor!(bp, ea, unew, damp)
     return err
 end
