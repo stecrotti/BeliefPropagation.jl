@@ -13,9 +13,9 @@ using Base.Threads: @threads, SpinLock
 using LogExpFunctions: xlogx, xlogy
 using BlockArrays: mortar
 using ForwardDiff
+using AtomicArrays: AtomicVector
 
 include("bpfactor.jl")
-include("atomic_vector.jl")
 include("bp.jl")
 include("maxsum.jl")
 
