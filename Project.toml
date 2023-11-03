@@ -29,7 +29,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 FactorGraphsPlotsExt = ["Plots", "GraphRecipes"]
 
 [compat]
-AtomicArrays = "1.0"
+AtomicArrays = ">= 1.0.1"
 BlockArrays = "0.16"
 CavityTools = "0.2.2"
 FillArrays = "1.7"
