@@ -13,6 +13,7 @@ using Base.Threads: @threads, SpinLock
 using LogExpFunctions: xlogx, xlogy
 using BlockArrays: mortar
 using ForwardDiff
+using MappedArrays: mappedarray
 
 include("bpfactor.jl")
 include("bp.jl")

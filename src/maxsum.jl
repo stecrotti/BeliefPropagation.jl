@@ -24,35 +24,40 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     for ia in ei
         logzᵢ₂ₐ = maximum(hnew[ia])
         hnew[ia] .-= logzᵢ₂ₐ
-        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
+                errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
 
+struct MS <: Real
+    val::Float64
+    MS(v::Float64) = new(v)
+end
+
+Base.:(+)(x::MS, y::MS) = MS(max(x.val, y.val))
+Base.:(+)(x::MS, y::Float64) = MS(max(x.val, log(y)))
+Base.:(+)(y::Float64, x::MS) = x + y
+Base.:(*)(x::MS, y::MS) = MS(x.val + y.val)
+Base.:(*)(x::MS, y::Float64) = MS(x.val + log(y))
+Base.:(*)(y::Float64, x::MS) = x * y
+Base.one(::Type{MS}) = MS(0.0)
+Base.zero(::Type{MS}) = MS(-Inf)
+
+
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
         f::BetheFreeEnergy; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
-    ψₐ = ψ[a]
-    for ai in ea
-        unew[ai] .= typemin(eltype(bp))
-    end
-    logzₐ = typemin(eltype(bp))
-    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-        for (i, ai) in pairs(ea)
-            unew[ai][xₐ[i]] = max(unew[ai][xₐ[i]], log(ψₐ(xₐ)) + 
-                sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
-        end
-        logzₐ = max(logzₐ, 
-            log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
-    end
+    hflat = mortar([mappedarray(MS, h[ai]) for ai in ea])
+    uflat = mortar([mappedarray(x->MS(x), x->x.val, unew[ai]) for ai in ea])
+    ret = DiffResults.DiffResult(MS(0.0), uflat)
+    ForwardDiff.gradient!(ret, hin -> compute_za(ψ[a], hin.blocks), hflat)
+    logzₐ = DiffResults.value(ret).val
     f.factors[a] = -logzₐ
     err = typemin(eltype(bp))
     for ai in ea
-        logzₐ₂ᵢ = maximum(unew[ai])
-        unew[ai] .-= logzₐ₂ᵢ
+        unew[ai] .-= maximum(unew[ai])
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end

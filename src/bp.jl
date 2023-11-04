@@ -388,10 +388,9 @@ function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::R
     return errv, errb
 end
 
-function compute_za(ψₐ, msg_in)
-    isempty(msg_in) && return one(eltype(ψₐ))
-    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
-        for xₐ in Iterators.product(eachindex.(msg_in)...))
+function compute_za(ψₐ, msg_in::AbstractVector{<:AbstractVector{T}}) where T
+    sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ); init=one(T)) 
+        for xₐ in Iterators.product(eachindex.(msg_in)...); init=zero(T))
 end
 
 function set_messages_factor!(bp, ea, unew, damp)
