@@ -13,8 +13,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
-    msg_sum(m1, m2) = m1 .+ m2
-    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], +, logϕᵢ)
     logzᵢ = maximum(bnew[i])
     bnew[i] .-= logzᵢ
     f.variables[i] = -logzᵢ
