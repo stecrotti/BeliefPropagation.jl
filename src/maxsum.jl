@@ -24,7 +24,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     for ia in ei
         logzᵢ₂ₐ = maximum(hnew[ia])
         hnew[ia] .-= logzᵢ₂ₐ
-                errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
+        errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
