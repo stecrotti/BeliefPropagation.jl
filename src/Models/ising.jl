@@ -109,9 +109,9 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
-    @views Πtanhh = cavity!(unew[ea], tanh.(h[ea]), *, one(eltype(bp)))
-    unew[ea] .= atanh.(tanh(Jₐ) .* unew[ea])
-    zₐ = cosh(Jₐ) * (1 + tanh(Jₐ) * Πtanhh)
+    @views prodtanh = cavity!(unew[ea], tanh.(h[ea]), *, tanh(Jₐ))
+    unew[ea] .= atanh.(unew[ea])
+    zₐ = cosh(Jₐ) * (1 + prodtanh)
     f.factors[a] = -log(zₐ)
     err = -Inf
     for ai in ea
@@ -157,12 +157,10 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
         f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
-    ∂i = neighbors(g, variable(i))
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
-    cout, cfull = cavity(abs.(u[ei]), +, 0.0)
     errb = abs(bnew[i] - b[i])
-    logzᵢ = abs(bnew[i]) - cfull
+    logzᵢ = abs(bnew[i]) - sum(abs, u[ei]; init=zero(eltype(bp)))
     f.variables[i] = -logzᵢ
     b[i] = bnew[i]
     errv = -Inf
