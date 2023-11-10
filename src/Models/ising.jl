@@ -87,7 +87,7 @@ end
 
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
@@ -105,7 +105,7 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
 end
 
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        unew, damp::Real, f::BetheFreeEnergy; extra_kwargs...)
     (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
@@ -154,7 +154,7 @@ end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ∂i = neighbors(g, variable(i))
@@ -174,7 +174,7 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
 end
 
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        unew, damp::Real, f::BetheFreeEnergy; extra_kwargs...)
     (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ

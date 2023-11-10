@@ -4,7 +4,7 @@ using BeliefPropagation.FactorGraphs: AbstractFactorGraph, FactorGraph,
     pairwise_interaction_graph, factor, variable, degree, edge_indices
 
 using BeliefPropagation: BPFactor, BP, BetheFreeEnergy
-import BeliefPropagation: AtomicVector, damp!, cavity, cavity!
+import BeliefPropagation: damp!, cavity, cavity!
 using BeliefPropagation
 
 using IndexedGraphs

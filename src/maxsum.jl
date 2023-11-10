@@ -9,7 +9,7 @@ function iterate_ms!(bp::BP; kwargs...)
 end
 
 function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
@@ -31,7 +31,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
 end
 
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
-        f::BetheFreeEnergy{<:AtomicVector}; extra_kwargs...)
+        f::BetheFreeEnergy; extra_kwargs...)
     (; g, ψ, u, h) = bp
     ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))

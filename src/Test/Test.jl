@@ -157,7 +157,7 @@ function test_observables_bp(bp::BP; kwargs...)
 end
 
 function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
-        f::BeliefPropagation.BetheFreeEnergy{<:BeliefPropagation.AtomicVector}; extra_kwargs...) where {
+        f::BeliefPropagation.BetheFreeEnergy; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, h) = bp
     ∂a = neighbors(g, factor(a))
