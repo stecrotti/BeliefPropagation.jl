@@ -411,10 +411,11 @@ function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
     (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
-    zₐ = compute_za(ψₐ, h[ea])
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
-    ForwardDiff.gradient!(uflat, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)
+    ForwardDiff.gradient!(res, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    zₐ = DiffResults.value(res)
     f.factors[a] = -log(zₐ)
     err = set_messages_factor!(bp, ea, unew, damp)
     return err
