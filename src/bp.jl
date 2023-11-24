@@ -383,8 +383,7 @@ function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::R
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
-    msg_mult(m1, m2) = m1 .* m2
-    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     return errv, errb
 end
