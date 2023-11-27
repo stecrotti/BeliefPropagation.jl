@@ -383,8 +383,7 @@ function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::R
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
-    msg_mult(m1, m2) = m1 .* m2
-    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_mult, ϕᵢ)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     return errv, errb
 end
@@ -411,10 +410,11 @@ function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
     (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
-    zₐ = compute_za(ψₐ, h[ea])
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
-    ForwardDiff.gradient!(uflat, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)
+    ForwardDiff.gradient!(res, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    zₐ = DiffResults.value(res)
     f.factors[a] = -log(zₐ)
     err = set_messages_factor!(bp, ea, unew, damp)
     return err
