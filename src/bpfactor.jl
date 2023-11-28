@@ -13,8 +13,11 @@ Base.eltype(f::BPFactor) = typeof(f(1))
 A type of `BPFactor` which returns the same value for any input: it behaves as if it wasn't even there.
 It is used as the default for single-variable factors
 """
-struct UniformFactor <: BPFactor; end
-(f::UniformFactor)(x) = 1
+struct UniformFactor{T} <: BPFactor; end
+
+UniformFactor() = UniformFactor{Int64}()
+
+(f::UniformFactor{T})(x) where T = one(T)
 
 """
     TabulatedBPFactor
@@ -24,7 +27,7 @@ A type of `BPFactor` constructed by specifying the output to any input in a tabu
 struct TabulatedBPFactor{T<:Real,N} <: BPFactor
     values :: Array{T,N}
     function TabulatedBPFactor(values::Array{T,N}) where {T<:Real,N}
-        any(<(0), values) && throw(ArgumentError("Factors can only take non-negative values"))
+        any(<(zero(T)), values) && throw(ArgumentError("Factors can only take non-negative values"))
         return new{T,N}(values)
     end
 end

@@ -227,6 +227,7 @@ end
 message_convergence(tol::Real) = MessageConvergence(tol)
 
 function (check_convergence::MessageConvergence)(::BP, errv, errf, errb)
+    @show errv, errf
     max(maximum(errv), maximum(errf)) < check_convergence.tol
 end
 
@@ -321,8 +322,8 @@ function iterate!(bp::BP;
     (; g, u, h, b) = bp
     T = eltype(bp)
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
-    errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
-    errb = zeros(T, nvariables(g))
+    errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
+    errb = zeros(nvariables(g))
     for it in 1:maxiter
         compute_fai!(f, bp)
         @threads for a in factors(bp.g)
@@ -369,12 +370,13 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     errb = maximum(abs, bnew[i] - b[i])
     f.variables[i] = -log(zᵢ)
     b[i] = bnew[i]
-    errv = zero(eltype(bp))
+    errv = 0.0
     for ia in ei
         hnew[ia] ./= sum(hnew[ia])
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
+    @show errv, errb
     return errv, errb
 end
 
@@ -385,6 +387,7 @@ function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::R
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
+    @show errv, errb
     return errv, errb
 end
 
@@ -395,7 +398,7 @@ end
 
 function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
-    err = zero(eltype(bp))
+    err = 0.0
     for ai in ea
         unew[ai] ./= sum(unew[ai])
         err = max(err, maximum(abs, unew[ai] - u[ai]))

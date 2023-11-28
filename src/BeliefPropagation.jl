@@ -15,6 +15,7 @@ using BlockArrays: mortar
 using ForwardDiff
 using MappedArrays: mappedarray
 
+include("ms.jl")
 include("bpfactor.jl")
 include("bp.jl")
 include("maxsum.jl")
