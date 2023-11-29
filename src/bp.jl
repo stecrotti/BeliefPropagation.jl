@@ -227,7 +227,6 @@ end
 message_convergence(tol::Real) = MessageConvergence(tol)
 
 function (check_convergence::MessageConvergence)(::BP, errv, errf, errb)
-    @show errv, errf
     max(maximum(errv), maximum(errf)) < check_convergence.tol
 end
 
@@ -276,9 +275,9 @@ julia> @assert sum(f) ≈ bethe_free_energy(bp)
 """
 function init_free_energy(bp::BP)
     T = eltype(bp)
-    a = zeros(T, nfactors(bp.g))
-    i = zeros(T, nvariables(bp.g))
-    ai = zeros(T, ne(bp.g))
+    a = zeros(nfactors(bp.g))
+    i = zeros(nvariables(bp.g))
+    ai = zeros(ne(bp.g))
     return BetheFreeEnergy(a, i, ai, 
         _free_energy_correction_factors(bp), _free_energy_correction_edges(bp))
 end
@@ -376,25 +375,28 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
-    @show errv, errb
     return errv, errb
 end
 
 function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, variable(i))
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
-    @show errv, errb
     return errv, errb
 end
 
-function compute_za(ψₐ, msg_in::AbstractVector{<:AbstractVector{T}}) where T
-    sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ); init=one(T)) 
-        for xₐ in Iterators.product(eachindex.(msg_in)...); init=zero(T))
+function compute_za(ψₐ, h::AbstractVector{<:AbstractVector{T}}) where T
+    sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(h, xₐ); init=one(T)) 
+        for xₐ in Iterators.product(eachindex.(h)...); init=zero(T))
 end
+
+function compute_zi(ϕ, b, u, rein)
+    sum(prod((ua[x] for ua in u); init=ϕ(x)*b[x]^rein) for x in eachindex(b))
+end
+
 
 function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
