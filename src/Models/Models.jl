@@ -12,8 +12,10 @@ using InvertedIndices
 using LinearAlgebra: Symmetric
 
 include("ising.jl")
+include("ksat.jl")
 
 export IsingCoupling, IsingField, Ising
 export BP, fast_ising_bp
+export KSATClause
 
 end
