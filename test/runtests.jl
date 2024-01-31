@@ -25,6 +25,10 @@ end
     include("Models/ising.jl")
 end
 
+@testset "KSAT" begin
+    include("Models/ksat.jl")
+end
+
 @testset "Autodiff" begin
     include("autodiff.jl")
 end
