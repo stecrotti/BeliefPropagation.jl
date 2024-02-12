@@ -275,9 +275,9 @@ julia> @assert sum(f) ≈ bethe_free_energy(bp)
 """
 function init_free_energy(bp::BP)
     T = eltype(bp)
-    a = zeros(T, nfactors(bp.g))
-    i = zeros(T, nvariables(bp.g))
-    ai = zeros(T, ne(bp.g))
+    a = zeros(nfactors(bp.g))
+    i = zeros(nvariables(bp.g))
+    ai = zeros(ne(bp.g))
     return BetheFreeEnergy(a, i, ai, 
         _free_energy_correction_factors(bp), _free_energy_correction_edges(bp))
 end
@@ -321,8 +321,8 @@ function iterate!(bp::BP;
     (; g, u, h, b) = bp
     T = eltype(bp)
     unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
-    errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
-    errb = zeros(T, nvariables(g))
+    errv = zeros(nvariables(g)); errf = zeros(nfactors(g))
+    errb = zeros(nvariables(g))
     for it in 1:maxiter
         compute_fai!(f, bp)
         @threads for a in factors(bp.g)
@@ -369,7 +369,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     errb = maximum(abs, bnew[i] - b[i])
     f.variables[i] = -log(zᵢ)
     b[i] = bnew[i]
-    errv = zero(eltype(bp))
+    errv = 0.0
     for ia in ei
         hnew[ia] ./= sum(hnew[ia])
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
@@ -381,22 +381,26 @@ end
 function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real,
         f::BetheFreeEnergy; extra_kwargs...)
     (; g, ϕ, u, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, variable(i))
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     return errv, errb
 end
 
-function compute_za(ψₐ, msg_in)
-    isempty(msg_in) && return one(eltype(ψₐ))
-    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
-        for xₐ in Iterators.product(eachindex.(msg_in)...))
+function compute_za(ψₐ, h::AbstractVector{<:AbstractVector{T}}) where T
+    sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(h, xₐ); init=one(T)) 
+        for xₐ in Iterators.product(eachindex.(h)...); init=zero(T))
 end
+
+function compute_zi(ϕ, b, u, rein)
+    sum(prod((ua[x] for ua in u); init=ϕ(x)*b[x]^rein) for x in eachindex(b))
+end
+
 
 function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
-    err = zero(eltype(bp))
+    err = 0.0
     for ai in ea
         unew[ai] ./= sum(unew[ai])
         err = max(err, maximum(abs, unew[ai] - u[ai]))

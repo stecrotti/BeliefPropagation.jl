@@ -170,8 +170,8 @@ end
     β = 1
     ising = Ising(g, J, h, β)
     bp_float = BP(ising)
-    bp = BP(bp_float.g, bp_float.ψ, bp_float.ϕ, [[1,1] for _ in bp_float.u],
-        [[1,1] for _ in bp_float.h], [[1,1] for _ in bp_float.b])
+    bp = BP(bp_float.g, bp_float.ψ, bp_float.ϕ, [[1.,1.] for _ in bp_float.u],
+        [[1.,1.] for _ in bp_float.h], [[1.,1.] for _ in bp_float.b])
     f = init_free_energy(bp)
     iterate_ms!(bp; maxiter=20, f, tol=0)
     e = avg_energy(avg_energy_ms, bp)

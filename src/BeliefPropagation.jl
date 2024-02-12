@@ -13,7 +13,9 @@ using Base.Threads: @threads, SpinLock
 using LogExpFunctions: xlogx, xlogy
 using BlockArrays: mortar
 using ForwardDiff
+using MappedArrays: mappedarray
 
+include("ms.jl")
 include("bpfactor.jl")
 include("bp.jl")
 include("maxsum.jl")
@@ -21,7 +23,7 @@ include("maxsum.jl")
 include("Models/Models.jl")
 include("Test/Test.jl")
 
-export BPFactor, TabulatedBPFactor, UniformFactor
+export BPFactor, TabulatedBPFactor, UniformFactor, MS
 export AbstractFactorGraph, FactorGraph, RegularFactorGraph, variables, factors, nvariables, 
     nfactors
 export BP, reset!, nstates, evaluate, energy

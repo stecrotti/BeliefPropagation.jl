@@ -13,8 +13,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
-    msg_sum(m1, m2) = m1 .+ m2
-    bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], +, logϕᵢ)
     logzᵢ = maximum(bnew[i])
     bnew[i] .-= logzᵢ
     f.variables[i] = -logzᵢ
@@ -30,29 +29,21 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     return errv, errb
 end
 
+
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
         f::BetheFreeEnergy; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
-    ψₐ = ψ[a]
-    for ai in ea
-        unew[ai] .= typemin(eltype(bp))
-    end
-    logzₐ = typemin(eltype(bp))
-    for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
-        for (i, ai) in pairs(ea)
-            unew[ai][xₐ[i]] = max(unew[ai][xₐ[i]], log(ψₐ(xₐ)) + 
-                sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
-        end
-        logzₐ = max(logzₐ, 
-            log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
-    end
+    hflat = mortar([mappedarray(x->MS(x), h[ai]) for ai in ea])
+    uflat = mortar([mappedarray(x->MS(x), x->x.val, unew[ai]) for ai in ea])
+    #@show typeof(hflat) typeof(uflat) typeof(h[ea])
+    ret = DiffResults.DiffResult(MS(zero(eltype(uflat))), uflat)
+    ForwardDiff.gradient!(ret, hin -> compute_za(ψ[a], hin.blocks), hflat)
+    logzₐ = DiffResults.value(ret).val
     f.factors[a] = -logzₐ
     err = typemin(eltype(bp))
     for ai in ea
-        logzₐ₂ᵢ = maximum(unew[ai])
-        unew[ai] .-= logzₐ₂ᵢ
+        unew[ai] .-= maximum(unew[ai])
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
