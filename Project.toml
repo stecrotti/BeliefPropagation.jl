@@ -29,7 +29,7 @@ FactorGraphsPlotsExt = ["Plots", "GraphRecipes"]
 
 [compat]
 BlockArrays = "0.16"
-CavityTools = "0.2.2"
+CavityTools = "0.2.2 - 1.1"
 FillArrays = "1.7"
 ForwardDiff = "0.10"
 GraphRecipes = "0.5"
