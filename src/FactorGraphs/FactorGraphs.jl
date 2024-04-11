@@ -5,8 +5,8 @@ using IndexedGraphs:
     AbstractIndexedGraph, IndexedGraph, IndexedEdge, BipartiteIndexedGraph, 
     BipartiteGraphVertex,
     NullNumber,
-    src, dst, idx, edges, nv, ne, degree, linearindex,
-    nv_left, nv_right, Left, Right
+    src, dst, idx, edges, nv, ne, degree, linearindex, neighbors, adjacency_matrix,
+    nv_left, nv_right, vertex, Left, Right
 
 using Graphs: Graphs, AbstractGraph, is_cyclic, prufer_decode
 
