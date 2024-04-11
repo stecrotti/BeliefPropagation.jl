@@ -1,15 +1,14 @@
 module FactorGraphs
 
 using IndexedGraphs:
+    IndexedGraphs,
     AbstractIndexedGraph, IndexedGraph, IndexedEdge, BipartiteIndexedGraph, 
     BipartiteGraphVertex,
     NullNumber,
     src, dst, idx, edges, nv, ne, degree, linearindex,
     nv_left, nv_right, Left, Right
-using IndexedGraphs
 
-using Graphs: AbstractGraph, is_cyclic, prufer_decode
-using Graphs
+using Graphs: Graphs, AbstractGraph, is_cyclic, prufer_decode
 
 using FillArrays: Fill
 
