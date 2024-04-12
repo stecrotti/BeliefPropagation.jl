@@ -1,9 +1,9 @@
 using BeliefPropagation
-using BeliefPropagation.FactorGraphs
 using BeliefPropagation.Models
 using BeliefPropagation.Test
 using Test
 using Aqua
+using FactorGraphs
 using Graphs
 using IndexedGraphs
 using SparseArrays
@@ -15,11 +15,6 @@ using ForwardDiff
 @testset "Code quality (Aqua.jl)" begin
     Aqua.test_all(BeliefPropagation; ambiguities = false,)
     Aqua.test_ambiguities(BeliefPropagation)
-end
-
-@testset "FactorGraphs" begin
-    include("FactorGraphs/factorgraph.jl")
-    include("FactorGraphs/generators.jl")
 end
 
 @testset "BeliefPropagation" begin

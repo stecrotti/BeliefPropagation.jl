@@ -164,7 +164,7 @@ avg_energy(bp::BP) = avg_energy(avg_energy_bp, bp)
 _free_energy_correction_factors(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1
 _free_energy_correction_edges(bp::BP{F, FV, M, MB, G}) where {F, FV, M, MB, G} = 1
 
-const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:RegularFactorGraph}
+const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:InfiniteRegularFactorGraph}
 _free_energy_correction_factors(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
 _free_energy_correction_edges(bp::BPRegular) = bp.g.kᵢ
 

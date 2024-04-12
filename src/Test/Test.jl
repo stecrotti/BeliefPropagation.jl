@@ -3,7 +3,7 @@ module Test
 using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
 using BeliefPropagation
-using BeliefPropagation.FactorGraphs: AbstractFactorGraph, FactorGraph, RegularFactorGraph,
+using FactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
     factor, variable, factors, variables, neighbors
 
 using Test: @test
@@ -139,7 +139,7 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, states)
     ψ = [rand_factor(rng, [states[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
     return BP(g, ψ, states)  
 end
-function rand_bp(rng::AbstractRNG, g::RegularFactorGraph, states)
+function rand_bp(rng::AbstractRNG, g::InfiniteRegularFactorGraph, states)
     ψ = [rand_factor(rng, fill(only(states), degree(g, factor(1))))] 
     return BP(g, ψ, q)  
 end
