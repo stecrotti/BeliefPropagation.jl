@@ -131,7 +131,7 @@ end
 
     kₐ = 2
     kᵢ = 3
-    g = RegularFactorGraph(kₐ, kᵢ)
+    g = InfiniteRegularFactorGraph(kₐ, kᵢ)
     ψ = [IsingCoupling(J)]
     ϕ = [IsingField(h)]
     bp = BP(g, ψ, 2; ϕ)
@@ -140,7 +140,6 @@ end
     iterate!(bp; maxiter=100, tol=1e-12, f)
     @test sum(f) ≈ bethe_free_energy(bp)
 
-    using Graphs
     g2 = pairwise_interaction_graph(complete_graph(4))
     bp2 = fast_ising_bp(g2, fill(IsingCoupling(J), 6), fill(IsingField(h), 4))
     f2 = init_free_energy(bp2)

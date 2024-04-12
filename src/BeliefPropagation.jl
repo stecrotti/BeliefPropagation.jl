@@ -1,8 +1,6 @@
 module BeliefPropagation
 
-include("FactorGraphs/FactorGraphs.jl")
-
-using .FactorGraphs: AbstractFactorGraph, FactorGraph, RegularFactorGraph, FactorGraphVertex,
+using FactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph, FactorGraphVertex,
     nvariables, nfactors, variables, factors, factor, variable,
     neighbors, edge_indices, edges, src, dst, idx, ne, nv, degree
 using CavityTools: cavity, cavity! 
@@ -22,8 +20,6 @@ include("Models/Models.jl")
 include("Test/Test.jl")
 
 export BPFactor, TabulatedBPFactor, UniformFactor
-export AbstractFactorGraph, FactorGraph, RegularFactorGraph, variables, factors, nvariables, 
-    nfactors
 export BP, reset!, nstates, evaluate, energy
 export init_free_energy, iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
 export message_convergence, belief_convergence
