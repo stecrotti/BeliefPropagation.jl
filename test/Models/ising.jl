@@ -131,7 +131,7 @@ end
 
     kₐ = 2
     kᵢ = 3
-    g = InfiniteRegularFactorGraph(kₐ, kᵢ)
+    g = InfiniteRegularFactorGraph(kᵢ, kₐ)
     ψ = [IsingCoupling(J)]
     ϕ = [IsingField(h)]
     bp = BP(g, ψ, 2; ϕ)

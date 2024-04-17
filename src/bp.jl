@@ -256,7 +256,7 @@ Return a `BeliefPropagation.BetheFreeEnergy` which can be used to compute the Be
 Example
 ======
 ```jldoctest init_free_energy
-julia> using BeliefPropagation, BeliefPropagation.FactorGraphs, BeliefPropagation.Models
+julia> using BeliefPropagation, IndexedFactorGraphs, BeliefPropagation.Models
 
 julia> using Random: MersenneTwister
 
