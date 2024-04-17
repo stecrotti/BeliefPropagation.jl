@@ -3,7 +3,7 @@ module Test
 using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
 using BeliefPropagation
-using FactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
+using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
     factor, variable, factors, variables, neighbors
 
 using Test: @test

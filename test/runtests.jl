@@ -3,7 +3,7 @@ using BeliefPropagation.Models
 using BeliefPropagation.Test
 using Test
 using Aqua
-using FactorGraphs
+using IndexedFactorGraphs
 using Graphs
 using IndexedGraphs
 using SparseArrays

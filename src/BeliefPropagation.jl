@@ -1,6 +1,6 @@
 module BeliefPropagation
 
-using FactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph, FactorGraphVertex,
+using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph, FactorGraphVertex,
     nvariables, nfactors, variables, factors, factor, variable,
     neighbors, edge_indices, edges, src, dst, idx, ne, nv, degree
 using CavityTools: cavity, cavity! 

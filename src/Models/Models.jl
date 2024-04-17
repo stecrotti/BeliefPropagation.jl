@@ -1,6 +1,6 @@
 module Models 
 
-using FactorGraphs: AbstractFactorGraph, FactorGraph,
+using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph,
     pairwise_interaction_graph, factor, variable, degree, edge_indices,
     nvariables, nfactors, variables, factors
 
