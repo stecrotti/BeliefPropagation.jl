@@ -1,25 +1,12 @@
-# from https://github.com/JuliaManifolds/Manifolds.jl/blob/71cd2aa54591ee35cdbb45af9c810c5c3704e60c/docs/make.jl#L8
-if Base.active_project() != joinpath(@__DIR__, "Project.toml")
-    using Pkg
-    Pkg.activate(@__DIR__)
-    Pkg.develop(PackageSpec(; path=(@__DIR__) * "/../"))
-    Pkg.resolve()
-    Pkg.instantiate()
-end
-
 using BeliefPropagation
 using Documenter
 
-# for package extension
-using Plots, GraphRecipes
-
 DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup, 
-    :(using BeliefPropagation); recursive=true)
+    :(using BeliefPropagation, IndexedFactorGraphs); recursive=true)
 
 makedocs(;
     modules=[
         BeliefPropagation,
-        Base.get_extension(BeliefPropagation, :FactorGraphsPlotsExt),
     ],
     authors="Stefano Crotti, Alfredo Braunstein, and contributors",
     repo="https://github.com/stecrotti/BeliefPropagation.jl/blob/{commit}{path}#{line}",

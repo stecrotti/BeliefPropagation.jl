@@ -1,9 +1,9 @@
 using BenchmarkTools
 using BeliefPropagation
-using BeliefPropagation.FactorGraphs
 using BeliefPropagation.Test
 using BeliefPropagation.Models
-using Random
+
+using Random, IndexedFactorGraphs
 
 const SUITE = BenchmarkGroup()
 

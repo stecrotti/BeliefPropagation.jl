@@ -1,8 +1,7 @@
 [deps]
 BeliefPropagation = "f47dce41-c8ad-4b69-b8b4-f2a36c7ebdf8"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+IndexedFactorGraphs = "edf0a622-c16b-410a-a162-e53dc16a76ae"
 
 [compats]
 Documenter = "1.0"

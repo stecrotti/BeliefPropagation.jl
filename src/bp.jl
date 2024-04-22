@@ -6,7 +6,7 @@ A type representing the state of the Belief Propagation algorithm.
 Fields
 ========
 
-- `g`: a [`FactorGraph`](@ref)
+- `g`: a [`FactorGraph`]
 - `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
 - `ϕ`: a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 - `u`: messages from factor to variable
@@ -46,7 +46,7 @@ Constructor for the BP type.
 Arguments
 ========
 
-- `g`: a [`FactorGraph`](@ref)
+- `g`: a [`FactorGraph`]
 - `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
 - `states`: an iterable of integers of length equal to the number of variable nodes specifyig the number of values each variable can take 
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
