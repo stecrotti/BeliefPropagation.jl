@@ -11,9 +11,7 @@ Documentation for [BeliefPropagation](https://github.com/stecrotti/BeliefPropaga
 
 ```@autodocs
 Modules = [BeliefPropagation,
-    BeliefPropagation.FactorGraphs,
     BeliefPropagation.Models,
     BeliefPropagation.Test,
-    Base.get_extension(BeliefPropagation, :FactorGraphsPlotsExt),
     ]
 ```
