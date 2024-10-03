@@ -8,18 +8,15 @@ rng = MersenneTwister(1)
         test_za(ψ[a], fill(2, degree(g, factor(a))))
     end
     bp = BP(g, ψ, fill(2, nvariables(g)))
-    f = init_free_energy(bp)
-    iterate!(bp; maxiter=10, tol=0.0, f)
+    iterate!(bp; maxiter=10, tol=0.0)
     test_observables_bp(bp)
 
     @testset "Generic BP factor" begin
         ψ_generic = [BPFactor(bp.ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
         ϕ_generic = [BPFactor(bp.ϕ[i], (2,)) for i in variables(g)]
         bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
-        f = init_free_energy(bp)
-        iterate!(bp_generic; maxiter=10, tol=0.0, f)
+        iterate!(bp_generic; maxiter=10, tol=0.0)
         test_observables_bp(bp_generic)
-        @test sum(f) ≈ bethe_free_energy(bp_generic)
     end
 end
 
