@@ -8,8 +8,8 @@ function iterate_ms!(bp::BP; kwargs...)
         compute_fai! = compute_fai_ms!, kwargs...)
 end
 
-function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real;
+        extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
     logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
@@ -17,7 +17,6 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
     logzᵢ = maximum(bnew[i])
     bnew[i] .-= logzᵢ
-    f.variables[i] = -logzᵢ
     errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     errv = typemin(eltype(bp))
@@ -30,8 +29,8 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real,
     return errv, errb
 end
 
-function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+function update_f_ms!(bp::BP, a::Integer, unew, damp::Real;
+        extra_kwargs...)
     (; g, ψ, u, h) = bp
     ∂a = neighbors(g, factor(a))
     ea = edge_indices(g, factor(a))
@@ -39,16 +38,15 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real,
     for ai in ea
         unew[ai] .= typemin(eltype(bp))
     end
-    logzₐ = typemin(eltype(bp))
+    # logzₐ = typemin(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] = max(unew[ai][xₐ[i]], log(ψₐ(xₐ)) + 
                 sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
         end
-        logzₐ = max(logzₐ, 
-            log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
+        # logzₐ = max(logzₐ, 
+        #     log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
     end
-    f.factors[a] = -logzₐ
     err = typemin(eltype(bp))
     for ai in ea
         logzₐ₂ᵢ = maximum(unew[ai])
@@ -103,8 +101,7 @@ function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms
     return avg_energy_ms(bp; fb, b)
 end
 
-function compute_fai_ms!(f::BetheFreeEnergy, bp::BPGeneric)
-    fai = f.edges
+function compute_fai_ms!(fai, bp::BPGeneric)
     for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
         fai[ai] = -maximum(uaix + hiax for(uaix, hiax) in zip(uai, hia)) 
     end

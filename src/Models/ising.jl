@@ -86,15 +86,13 @@ function BeliefPropagation.reset!(bp::BPIsing)
 end
 
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
-        i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+        i::Integer, hnew, bnew, damp::Real, rein::Real; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
     logzᵢ = log(2cosh(bnew[i]) / prod(2cosh(uai) for uai in u[ei]; init=one(eltype(bp))))
-    f.variables[i] = -logzᵢ
     b[i] = bnew[i]
     errv = -Inf
     for ia in ei
@@ -105,14 +103,13 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
 end
 
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::BetheFreeEnergy; extra_kwargs...)
+        unew, damp::Real; extra_kwargs...)
     (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
     @views prodtanh = cavity!(unew[ea], tanh.(h[ea]), *, tanh(Jₐ))
-    unew[ea] .= atanh.(unew[ea])
     zₐ = cosh(Jₐ) * (1 + prodtanh)
-    f.factors[a] = -log(zₐ)
+    unew[ea] .= atanh.(unew[ea])
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
@@ -144,24 +141,29 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     end
 end
 
-function BeliefPropagation.compute_fai_bp!(f::BetheFreeEnergy, bp::BPIsing)
-    fai = f.edges
-    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
-        fai[ai] = -log((1 + tanh(uai)*tanh(hia)) / 2)
-    end
-    return nothing
+function BeliefPropagation.compute_zi(ϕᵢ::IsingField, msg_in::AbstractVector{T}, q::Integer) where T<:Real
+    bnew = sum(msg_in, init=ϕᵢ.βh) 
+    return 2cosh(bnew) / prod(2cosh(uai) for uai in msg_in; init=one(T))
+end
+
+function BeliefPropagation.compute_za(ψₐ::IsingCoupling, msg_in::AbstractVector{<:Real})
+    Jₐ = ψₐ.βJ
+    prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
+    return cosh(Jₐ) * (1 + prodtanh)
+end
+
+function BeliefPropagation.compute_zai(uai::Real, hia::Real)
+    return (1 + tanh(uai)*tanh(hia)) / 2
 end
 
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
-        i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+        i::Integer, hnew, bnew, damp::Real, rein::Real; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
-    logzᵢ = abs(bnew[i]) - sum(abs, u[ei]; init=zero(eltype(bp)))
-    f.variables[i] = -logzᵢ
+    # logzᵢ = abs(bnew[i]) - sum(abs, u[ei]; init=zero(eltype(bp)))
     b[i] = bnew[i]
     errv = -Inf
     for ia in ei
@@ -172,15 +174,14 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
 end
 
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
-        unew, damp::Real, f::BetheFreeEnergy; extra_kwargs...)
+        unew, damp::Real; extra_kwargs...)
     (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
     @views minh = cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
     signs, prodsigns = cavity(sign.(h[ea]), *, sign(Jₐ))
     unew[ea] .= signs .* unew[ea]
-    logzₐ = abs(Jₐ) - 2min(abs(Jₐ), minh)*(prodsigns!=1)
-    f.factors[a] = -logzₐ
+    # logzₐ = abs(Jₐ) - 2min(abs(Jₐ), minh)*(prodsigns!=1)
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
@@ -207,12 +208,4 @@ function BeliefPropagation.factor_beliefs_ms(bp::BPIsing)
         bₐ .-= zₐ
         bₐ
     end
-end
-
-function BeliefPropagation.compute_fai_ms!(f::BetheFreeEnergy, bp::BPIsing)
-    fai = f.edges
-    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
-        fai[ai] = abs(uai) + abs(hia) - abs(uai + hia)
-    end
-    return nothing
 end

@@ -4,16 +4,18 @@ using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
 using BeliefPropagation
 using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
-    factor, variable, factors, variables, neighbors
+    factor, factors, variables, neighbors
 
+using IndexedGraphs: degree
 using Test: @test
 using Random: AbstractRNG, default_rng
 using InvertedIndices: Not
 
 export exact_normalization, exact_prob, exact_marginals, exact_factor_marginals,
     exact_avg_energy, exact_minimum_energy
+export make_generic
 export rand_factor, rand_bp
-export test_observables_bp, test_za
+export test_observables_bp, test_za, test_observables_bp_generic
 
 """
     TabulatedBPFactor(f::BPFactor, states)
@@ -25,6 +27,18 @@ function BeliefPropagation.TabulatedBPFactor(f::BPFactor, states)
     return TabulatedBPFactor(values)
 end
 BeliefPropagation.BPFactor(f::BPFactor, states) = TabulatedBPFactor(f, states)
+
+"""
+    make_generic(bp::BP)
+
+Return the corresponding `BP` with plain `TabulatedBPFactor` as factors. Used to test specific implementations.
+"""
+function make_generic(bp::BP)
+    (; g, ψ, ϕ) = bp
+    ψ_generic = [BPFactor(ψ[a], nstates(bp, i) for i in neighbors(g, factor(a))) for a in factors(g)]
+    ϕ_generic = [BPFactor(ϕ[i], (nstates(bp, i),)) for i in variables(g)]
+    return BP(g, ψ_generic, [nstates(bp, i) for i in variables(g)]; ϕ = ϕ_generic)
+end
 
 function eachstate(bp::BP)
     return Iterators.product((1:nstates(bp, i) for i in variables(bp.g))...)
@@ -141,12 +155,12 @@ function rand_bp(rng::AbstractRNG, g::FactorGraph, states)
 end
 function rand_bp(rng::AbstractRNG, g::InfiniteRegularFactorGraph, states)
     ψ = [rand_factor(rng, fill(only(states), degree(g, factor(1))))] 
-    return BP(g, ψ, q)  
+    return BP(g, ψ, states)  
 end
 rand_bp(g::AbstractFactorGraph, qs) = rand_bp(default_rng(), g, qs)
 
 """
-    test_observables_bp(bp::BP
+    test_observables_bp(bp::BP; kwargs...)
 
 Test `beliefs_bp`, `factor_beliefs_bp` and `bethe_free_energy_bp` against the same quantities computed exactly by exhaustive enumeration.
 """
@@ -154,10 +168,26 @@ function test_observables_bp(bp::BP; kwargs...)
     @test isapprox(beliefs_bp(bp), exact_marginals(bp); kwargs...)
     @test isapprox(factor_beliefs_bp(bp), exact_factor_marginals(bp); kwargs...)
     @test isapprox(exp(-bethe_free_energy_bp(bp)), exact_normalization(bp); kwargs...)
+    @test isapprox(bethe_free_energy_bp(bp), bethe_free_energy_bp_beliefs(bp); kwargs...)
+    return nothing
 end
 
-function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
-        f::BeliefPropagation.BetheFreeEnergy; extra_kwargs...) where {
+"""
+    test_observables_bp_generic(bp::BP, bp_generic::BP; kwargs...)
+
+Test `beliefs_bp`, `factor_beliefs_bp` and `bethe_free_energy_bp` against the same quantities on a generic version.
+See also [`make_generic`](@ref)
+"""
+function test_observables_bp_generic(bp::BP, bp_generic::BP; kwargs...)
+    @test isapprox(beliefs_bp(bp), beliefs_bp(bp_generic); kwargs...)
+    @test isapprox(factor_beliefs_bp(bp), factor_beliefs_bp(bp_generic); kwargs...)
+    @test isapprox(bethe_free_energy_bp(bp), bethe_free_energy_bp(bp); kwargs...)
+    @test isapprox(BeliefPropagation.bethe_free_energy_bp_beliefs(bp), 
+        bethe_free_energy_bp_beliefs(bp); kwargs...)
+    return nothing
+end
+
+function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, h) = bp
     ∂a = neighbors(g, factor(a))
@@ -166,15 +196,14 @@ function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     for ai in ea
         unew[ai] .= 0
     end
-    zₐ = zero(eltype(bp))
+    # zₐ = zero(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] += ψₐ(xₐ) *
                 prod(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=1.0)
         end
-        zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
+        # zₐ += ψₐ(xₐ) * prod(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=1.0)
     end
-    f.factors[a] -= log(zₐ)
     err = BeliefPropagation.set_messages_factor!(bp, ea, unew, damp)
     return err
 end

@@ -10,17 +10,13 @@
         ψ = [BPFactor(f .^ β) for f in fₐ]
         ϕ = [BPFactor(f .^ β) for f in fᵢ]
         bp = BP(g, ψ, states; ϕ)
-        f = init_free_energy(bp)
-        iterate!(bp; maxiter=30, tol=1e-10, f)
-        return sum(f), bethe_free_energy(bp), avg_energy(bp)
+        iterate!(bp; maxiter=30, tol=1e-10)
+        return bethe_free_energy(bp), avg_energy(bp)
     end
 
     β = 1.0
-    f_fast, f, e = free_energy_energy(β)
-    @test f_fast ≈ f
-    e_autodiff_fast = ForwardDiff.derivative(β -> free_energy_energy(β)[1], β)
-    e_autodiff = ForwardDiff.derivative(β -> free_energy_energy(β)[2], β)
-    @test e_autodiff_fast ≈ e
+    f, e = free_energy_energy(β)
+    e_autodiff = ForwardDiff.derivative(β -> free_energy_energy(β)[1], β)
     @test e_autodiff ≈ e
 end
 
@@ -34,16 +30,12 @@ end
         ψ = [IsingCoupling(β * Jᵢⱼ) for Jᵢⱼ in J]
         ϕ = [IsingField(β * hᵢ) for hᵢ in h]
         bp = fast_ising_bp(g, ψ, ϕ)
-        f = init_free_energy(bp)
-        iterate!(bp; maxiter=30, tol=1e-10, f)
-        return sum(f), bethe_free_energy(bp), avg_energy(bp)
+        iterate!(bp; maxiter=30, tol=1e-10)
+        return bethe_free_energy(bp), avg_energy(bp)
     end
 
     β = 1.0
-    f_fast, f, e = free_energy_energy(β)
-    @test f_fast ≈ f
-    e_autodiff_fast = ForwardDiff.derivative(β -> free_energy_energy(β)[1], β)
-    e_autodiff = ForwardDiff.derivative(β -> free_energy_energy(β)[2], β)
-    @test e_autodiff_fast ≈ e
+    f, e = free_energy_energy(β)
+    e_autodiff = ForwardDiff.derivative(β -> free_energy_energy(β)[1], β)
     @test e_autodiff ≈ e
 end

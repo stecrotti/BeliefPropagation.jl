@@ -39,7 +39,7 @@ end
 Base.eltype(bp::BP) = eltype(eltype(bp.b))
 
 """
-    BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, qs; ϕ)
+    BP(g::FactorGraph, ψ::AbstractVector{<:BPFactor}, states; ϕ)
 
 Constructor for the BP type.
 
@@ -168,7 +168,9 @@ const BPRegular{F, FV, M, MB} = BP{F, FV, M, MB, G} where {F, FV, M, MB, G<:Infi
 _free_energy_correction_factors(bp::BPRegular) = bp.g.kᵢ / bp.g.kₐ
 _free_energy_correction_edges(bp::BPRegular) = bp.g.kᵢ
 
-function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
+# compute the BFE in terms of beliefs (the default way is in terms of messages)
+function bethe_free_energy_bp_beliefs(bp::BP; 
+        fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
     fₐ = fᵢ = 0.0
     for a in factors(g)
@@ -188,6 +190,50 @@ function bethe_free_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     return fₐ + fᵢ
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
+
+function compute_zi(ϕᵢ::BPFactor, msg_in::AbstractVector{<:AbstractVector{<:Real}},
+        q::Integer)
+    init = [ϕᵢ(x) for x in 1:q]
+    bnew = reduce(.*, msg_in; init)
+    return sum(bnew)
+end
+
+function compute_za(ψₐ::BPFactor, msg_in::AbstractVector{<:AbstractVector{<:Real}})
+    isempty(msg_in) && return one(eltype(ψₐ))
+    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
+        for xₐ in Iterators.product(eachindex.(msg_in)...))
+end
+
+function compute_zai(uai::AbstractVector{<:Real}, hia::AbstractVector{<:Real})
+    return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
+end
+
+function bethe_free_energy_bp(bp::BP)
+    (; g, ψ, ϕ, h, u) = bp
+    corr_factors = _free_energy_correction_factors(bp)
+    corr_edges = _free_energy_correction_edges(bp)
+
+    f_factors = f_variables = f_edges = 0.0
+
+    for a in factors(g)
+        ea = edge_indices(g, factor(a))
+        zₐ = compute_za(ψ[a], h[ea])
+        f_factors += -log(zₐ)
+    end
+
+    for i in variables(g)
+        ei = edge_indices(g, variable(i))
+        zᵢ = compute_zi(ϕ[i], u[ei], nstates(bp, i))
+        f_variables += -log(zᵢ)
+    end
+
+    for ai in edge_indices(g)
+        zₐᵢ = compute_zai(u[ai], h[ai])
+        f_edges += -log(zₐᵢ)
+    end
+
+    return corr_factors*f_factors + f_variables - corr_edges*f_edges
+end
 
 @doc raw"""
     energy(bp::BP, x)
@@ -240,55 +286,6 @@ function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
 end
 
 
-struct BetheFreeEnergy{T<:AbstractVector{<:Real}, TF<:Real, TE<:Real}
-    factors         :: T
-    variables       :: T
-    edges           :: T
-    corr_factors    :: TF
-    corr_edges      :: TE
-end
-
-"""
-    init_free_energy(bp::BP)
-
-Return a `BeliefPropagation.BetheFreeEnergy` which can be used to compute the Bethe Free Energy using message normalizations. In particular, this avoids explicit computation of factor beliefs, whose cost is exponential in the factor degree.
-
-Example
-======
-```jldoctest init_free_energy
-julia> using BeliefPropagation, IndexedFactorGraphs, BeliefPropagation.Models
-
-julia> using Random: MersenneTwister
-
-julia> g = rand_factor_graph(MersenneTwister(0), 10, 15, 20);
-
-julia> ψ = IsingCoupling.(randn(MersenneTwister(0), nfactors(g)));
-
-julia> bp = BP(g, ψ, fill(2, nvariables(g)));
-
-julia> f = init_free_energy(bp);
-
-julia> iterate!(bp; maxiter=30, tol=1e-16, f);
-
-julia> @assert sum(f) ≈ bethe_free_energy(bp)
-```
-"""
-function init_free_energy(bp::BP)
-    T = eltype(bp)
-    a = zeros(T, nfactors(bp.g))
-    i = zeros(T, nvariables(bp.g))
-    ai = zeros(T, ne(bp.g))
-    return BetheFreeEnergy(a, i, ai, 
-        _free_energy_correction_factors(bp), _free_energy_correction_edges(bp))
-end
-# Base.length(::BetheFreeEnergy) = 3
-# Base.iterate(f::BetheFreeEnergy, args...) = iterate((f.factors, f.variables, f.edges), args...)
-
-function bethe_free_energy(f::BetheFreeEnergy)
-    return f.corr_factors * sum(f.factors) + sum(f.variables) - f.corr_edges * sum(f.edges)
-end
-Base.sum(f::BetheFreeEnergy) = bethe_free_energy(f)
-
 """
     iterate!(bp::BP; kwargs...)
 
@@ -303,7 +300,6 @@ Optional arguments
 - `tol`: convergence check parameter
 - `damp`: damping parameter
 - `rein`: reinforcement parameter
-- `f`: a vector to store on-the-fly computations of the bethe free energy
 - `callback`
 - `check_convergence`: a function that checks if convergence has been reached
 - extra arguments to be passed to custom `update_variable!` and `update_factor!`
@@ -311,10 +307,8 @@ Optional arguments
 function iterate!(bp::BP;
         update_variable! = update_v_bp!,
         update_factor! = update_f_bp!,
-        compute_fai! = compute_fai_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        f::BetheFreeEnergy = init_free_energy(bp),
-        callback = (bp, errv, errf, errb, it, f) -> nothing,
+        callback = (bp, errv, errf, errb, it) -> nothing,
         check_convergence=message_convergence(tol),
         extra_kwargs...
         )
@@ -324,25 +318,16 @@ function iterate!(bp::BP;
     errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
     for it in 1:maxiter
-        compute_fai!(f, bp)
         @threads for a in factors(bp.g)
-            errf[a] = update_factor!(bp, a, unew, damp, f; extra_kwargs...)
+            errf[a] = update_factor!(bp, a, unew, damp; extra_kwargs...)
         end
         @threads for i in variables(bp.g)
-            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it, f; extra_kwargs...)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; extra_kwargs...)
         end
-        callback(bp, errv, errf, errb, it, f)
+        callback(bp, errv, errf, errb, it)
         check_convergence(bp, errv, errf, errb) && return it
     end
     return maxiter
-end
-
-function compute_fai_bp!(f::BetheFreeEnergy, bp::BPGeneric)
-    fai = f.edges
-    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
-        fai[ai] = -log(sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))) 
-    end
-    return nothing
 end
 
 function damp!(x::Real, xnew::Real, damp::Real)
@@ -362,12 +347,11 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
     return x
 end
 
-function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
+function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     (; h, b) = bp
     zᵢ = sum(bnew[i])
     bnew[i] ./= zᵢ
     errb = maximum(abs, bnew[i] - b[i])
-    f.variables[i] = -log(zᵢ)
     b[i] = bnew[i]
     errv = zero(eltype(bp))
     for ia in ei
@@ -378,21 +362,16 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
     return errv, errb
 end
 
-function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real;
+        extra_kwargs...)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
-    errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp, f)
+    errv, errb= set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
 end
 
-function compute_za(ψₐ, msg_in)
-    isempty(msg_in) && return one(eltype(ψₐ))
-    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
-        for xₐ in Iterators.product(eachindex.(msg_in)...))
-end
 
 function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
@@ -405,8 +384,8 @@ function set_messages_factor!(bp, ea, unew, damp)
     return err
 end
 
-function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
-        f::BetheFreeEnergy; extra_kwargs...)
+function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real;
+        extra_kwargs...)
     (; g, ψ, h) = bp
     ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
@@ -414,8 +393,6 @@ function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real,
     uflat = @views mortar(unew[ea])
     res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)
     ForwardDiff.gradient!(res, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
-    zₐ = DiffResults.value(res)
-    f.factors[a] = -log(zₐ)
     err = set_messages_factor!(bp, ea, unew, damp)
     return err
 end
