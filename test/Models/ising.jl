@@ -110,6 +110,7 @@ end
     test_observables_bp(bp_fast)
 
     bp_generic = make_generic(bp_fast)
+    @test bp_generic isa BeliefPropagation.BPGeneric
     iterate!(bp_generic, maxiter=10, tol=0)
     test_observables_bp_generic(bp_fast, bp_generic)
 
