@@ -40,6 +40,7 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "API reference" => "api.md",
+        "Custom models" => "custom_factors.md",
     ],
 )
 
