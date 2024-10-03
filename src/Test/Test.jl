@@ -168,7 +168,7 @@ function test_observables_bp(bp::BP; kwargs...)
     @test isapprox(beliefs_bp(bp), exact_marginals(bp); kwargs...)
     @test isapprox(factor_beliefs_bp(bp), exact_factor_marginals(bp); kwargs...)
     @test isapprox(exp(-bethe_free_energy_bp(bp)), exact_normalization(bp); kwargs...)
-    @test isapprox(bethe_free_energy_bp(bp), bethe_free_energy_bp_beliefs(bp); kwargs...)
+    @test isapprox(bethe_free_energy_bp(bp), BeliefPropagation.bethe_free_energy_bp_beliefs(bp); kwargs...)
     return nothing
 end
 
@@ -183,7 +183,7 @@ function test_observables_bp_generic(bp::BP, bp_generic::BP; kwargs...)
     @test isapprox(factor_beliefs_bp(bp), factor_beliefs_bp(bp_generic); kwargs...)
     @test isapprox(bethe_free_energy_bp(bp), bethe_free_energy_bp(bp); kwargs...)
     @test isapprox(BeliefPropagation.bethe_free_energy_bp_beliefs(bp), 
-        bethe_free_energy_bp_beliefs(bp); kwargs...)
+        BeliefPropagation.bethe_free_energy_bp_beliefs(bp); kwargs...)
     return nothing
 end
 
