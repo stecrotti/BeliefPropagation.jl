@@ -53,10 +53,10 @@ end
     rng = MersenneTwister(0)
     N = 9
     g = prufer_decode(rand(rng, 1:N, N-2)) |> IndexedGraph
-    J = randn(rng, ne(g))
+    J = adjacency_matrix(g)
     h = randn(rng, nv(g))
     β = rand(rng)
-    ising = Ising(g, J, h, β)
+    ising = Ising(J, h, β)
     ms = BP(ising)
     iterate_ms!(ms; maxiter=20, tol=0)
     e = avg_energy(avg_energy_ms, ms)
