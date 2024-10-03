@@ -108,7 +108,7 @@ factor_beliefs(f::Function, bp::BP) = f(bp)
 
 Return the average energy
 ```math
-\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\phi_i(x_i)\right]
+\langle E \rangle =\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\phi_i(x_i)\right]
 ```
 """
 avg_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
@@ -118,7 +118,7 @@ avg_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
 
 Return the bethe free energy
 ```math
-\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\frac{b_a(\underline{x}_a)}{\psi_a(\underline{x}_a)}\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\frac{b_i(x_i)^{1-\lvert\partial i\rvert}}{\phi_i(x_i)}\right]
+F=\sum_a\sum_{\underline{x}_a}b_a(\underline{x}_a) \left[-\log\frac{b_a(\underline{x}_a)}{\psi_a(\underline{x}_a)}\right] + \sum_i\sum_{x_i}b_i(x_i) \left[-\log\frac{b_i(x_i)^{1-\lvert\partial i\rvert}}{\phi_i(x_i)}\right]
 ```
 """
 bethe_free_energy(f::Function, bp::BP; kwargs...) = f(bp; kwargs...)
@@ -194,7 +194,7 @@ bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
 Return the energy
 ```math
-\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left[-\log\phi_i(x_i)\right]
+E(\underline{x})\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left[-\log\phi_i(x_i)\right]
 ```
 of configuration `x`.
 """
