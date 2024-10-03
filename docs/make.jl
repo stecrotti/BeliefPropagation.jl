@@ -4,6 +4,26 @@ using Documenter
 DocMeta.setdocmeta!(BeliefPropagation, :DocTestSetup, 
     :(using BeliefPropagation, IndexedFactorGraphs); recursive=true)
 
+# # Copy README to `index.md`
+# # copied from https://github.com/rafaqz/Interfaces.jl/blob/071d44f6ae9c5a1c0e53b4a06cc44598224fbcc7/docs/make.jl#L8-L25
+# base_url = "https://github.com/stecrotti/BeliefPropagation.jl/blob/main/"
+# index_path = joinpath(@__DIR__, "src", "index.md")
+# readme_path = joinpath(dirname(@__DIR__), "README.md")
+
+# open(index_path, "w") do io
+#     println(
+#         io,
+#         """
+#         ```@meta
+#         EditURL = "$(base_url)README.md"
+#         ```
+#         """,
+#     )
+#     for line in eachline(readme_path)
+#         println(io, line)
+#     end
+# end
+
 makedocs(;
     modules=[
         BeliefPropagation,
@@ -19,6 +39,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "API reference" => "api.md",
     ],
 )
 
