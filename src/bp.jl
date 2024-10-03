@@ -194,7 +194,7 @@ bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
 Return the energy
 ```math
-E(\underline{x})\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left[-\log\phi_i(x_i)\right]
+E(\underline{x})=\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left[-\log\phi_i(x_i)\right]
 ```
 of configuration `x`.
 """
