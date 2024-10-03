@@ -1,9 +1,9 @@
-rng = MersenneTwister(0)
+rng = MersenneTwister(1)
 
 @testset "ksat random tree" begin
     n = 3
     g = rand_tree_factor_graph(rng, n)
-    ψ = [KSATClause(bitrand(degree(g, factor(a)))) for a in factors(g)]
+    ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
     for a in factors(g)
         test_za(ψ[a], fill(2, degree(g, factor(a))))
     end
@@ -28,7 +28,7 @@ end
     m = 3
     k = 3
     g = rand_regular_factor_graph(rng, n, m, k)
-    ψ = [KSATClause(bitrand(degree(g, factor(a)))) for a in factors(g)]
+    ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
     for a in factors(g)
         test_za(ψ[a], fill(2, degree(g, factor(a))))
     end
