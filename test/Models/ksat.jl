@@ -3,7 +3,10 @@ rng = MersenneTwister(0)
 @testset "ksat random tree" begin
     n = 3
     g = rand_tree_factor_graph(rng, n)
-    ψ = [KSATClause(bitrand(length(neighbors(g, factor(a))))) for a in factors(g)]
+    ψ = [KSATClause(bitrand(degree(g, factor(a)))) for a in factors(g)]
+    for a in factors(g)
+        test_za(ψ[a], fill(2, degree(g, factor(a))))
+    end
     bp = BP(g, ψ, fill(2, nvariables(g)))
     f = init_free_energy(bp)
     iterate!(bp; maxiter=10, tol=0.0, f)
@@ -25,7 +28,10 @@ end
     m = 3
     k = 3
     g = rand_regular_factor_graph(rng, n, m, k)
-    ψ = [KSATClause(bitrand(length(neighbors(g, factor(a))))) for a in factors(g)]
+    ψ = [KSATClause(bitrand(degree(g, factor(a)))) for a in factors(g)]
+    for a in factors(g)
+        test_za(ψ[a], fill(2, degree(g, factor(a))))
+    end
     ϕ = [BPFactor(1.0 .+ 1e-4 * randn(2)) for _ in variables(g)]
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
     iterate!(bp; maxiter=100, tol=1e-12, rein=1e-2)

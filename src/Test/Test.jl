@@ -13,7 +13,7 @@ using InvertedIndices: Not
 export exact_normalization, exact_prob, exact_marginals, exact_factor_marginals,
     exact_avg_energy, exact_minimum_energy
 export rand_factor, rand_bp
-export test_observables_bp
+export test_observables_bp, test_za
 
 """
     TabulatedBPFactor(f::BPFactor, states)
@@ -177,6 +177,30 @@ function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real,
     f.factors[a] -= log(zₐ)
     err = BeliefPropagation.set_messages_factor!(bp, ea, unew, damp)
     return err
+end
+
+function _rand_msgs(states)
+    m = map(states) do q
+        m = rand(q)
+        m / sum(m)
+    end
+    return collect(m)
+end
+
+"""
+    test_za(ψₐ::BPFactor, states)
+
+Test a specific implementation of `compute_za` against the naive one.
+"""
+function test_za(ψₐ::BPFactor, states;
+        msg_in::AbstractVector{<:AbstractVector{<:Real}}=_rand_msgs(states))
+
+    length(states) == length(msg_in) || throw(ArgumentError("states and msg_in must have same length"))
+    ψₐ_generic = BPFactor(ψₐ, states)
+    za = BeliefPropagation.compute_za(ψₐ, msg_in)
+    za_generic = BeliefPropagation.compute_za(ψₐ_generic, msg_in)
+    @test za ≈ za_generic
+    return nothing
 end
 
 end # module
