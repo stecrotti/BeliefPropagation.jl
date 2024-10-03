@@ -1,14 +1,14 @@
 module Models 
 
-using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph,
-    pairwise_interaction_graph, factor, variable, degree, edge_indices,
-    nvariables, nfactors, variables, factors
+using IndexedFactorGraphs: AbstractFactorGraph,
+    pairwise_interaction_graph, factor, variable, edge_indices,
+    nvariables, factors
 
-using BeliefPropagation: BPFactor, BP, BetheFreeEnergy, damp!, cavity, cavity!
+using BeliefPropagation: BPFactor, BP, damp!
 using BeliefPropagation
 
-using IndexedGraphs
-using InvertedIndices
+using CavityTools: cavity, cavity!
+using IndexedGraphs: IndexedGraphs, IndexedGraph, ne, neighbors, nv
 using LinearAlgebra: Symmetric
 
 include("ising.jl")

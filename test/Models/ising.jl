@@ -11,6 +11,8 @@
     pb = only(factor_beliefs(bp))
     c = pb[1,1] + pb[2,2] - pb[1,2] - pb[2,1]
     bfe = bethe_free_energy(bp)
+    bfe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)
+    @test bfe ≈ bfe_beliefs
     z = exp(-bfe)
 
     @test m[1] ≈ tanh(β * h[1] + atanh(tanh(β * h[2])*tanh(β*J[1])))
@@ -29,8 +31,7 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = BP(ising)
-    f = init_free_energy(bp)
-    iterate!(bp; maxiter=20, f, tol=0)
+    iterate!(bp; maxiter=20, tol=0)
     b = beliefs(bp)
     b_ex = exact_marginals(bp)
     @test b ≈ b_ex
@@ -41,9 +42,11 @@ end
     e_ex = exact_avg_energy(bp)
     @test e ≈ e_ex
     bfe = bethe_free_energy(bp)
+    bfe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)
+    @test bfe ≈ bfe_beliefs
     z = exp(-bfe)
     z_ex = exact_normalization(bp)
-    @test sum(f) ≈ bethe_free_energy(bp)
+    @test z ≈ z_ex
 end
 
 @testset "Ising random tree - maxsum" begin
@@ -55,12 +58,12 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     ms = BP(ising)
-    f = init_free_energy(ms)
-    iterate_ms!(ms; maxiter=20, f, tol=0)
+    iterate_ms!(ms; maxiter=20, tol=0)
     e = avg_energy(avg_energy_ms, ms)
     e_ex = exact_minimum_energy(ms)
     @test e ≈ e_ex
-    @test e ≈ sum(f)
+    f = bethe_free_energy(bethe_free_energy_ms, ms)
+    @test f ≈ e_ex
 end
 
 @testset "Ising random tree - fast version" begin
@@ -72,8 +75,7 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = fast_ising_bp(ising)
-    f = init_free_energy(bp)
-    iterate!(bp; maxiter=50, f, tol=1e-10)
+    iterate!(bp; maxiter=50, tol=1e-10)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
     bp_slow = BP(ising)
@@ -85,7 +87,12 @@ end
     bfe = bethe_free_energy(bp)
     bfe_slow = bethe_free_energy(bp_slow)
     @test bfe ≈ bfe_slow
-    @test sum(f) ≈ bfe
+    bfe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)
+    @test bfe ≈ bfe_beliefs
+
+    bp_generic = make_generic(bp)
+    iterate!(bp_generic, maxiter=20, tol=0)
+    test_observables_bp_generic(bp, bp_generic)
 end
 
 @testset "pspin random tree" begin
@@ -96,55 +103,43 @@ end
     ψ = IsingCoupling.(J)
     ϕ = IsingField.(h)
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
-    f = init_free_energy(bp)
-    iterate!(bp; maxiter=10, tol=0.0, f)
+    iterate!(bp; maxiter=10, tol=0.0)
     test_observables_bp(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
     iterate!(bp_fast; maxiter=10, tol=0.0)
     test_observables_bp(bp_fast)
-    @test sum(f) ≈ bethe_free_energy(bp)
+
+    bp_generic = make_generic(bp_fast)
+    iterate!(bp_generic, maxiter=10, tol=0)
+    test_observables_bp_generic(bp_fast, bp_generic)
 
     @testset "Generic BP factor" begin
-        ψ_generic = [BPFactor(ψ[a], fill(2, degree(g, factor(a)))) for a in factors(g)]
-        ϕ_generic = [BPFactor(ϕ[i], (2,)) for i in variables(g)]
-        bp_generic = BP(g, ψ_generic, fill(2, nvariables(g)); ϕ = ϕ_generic)
-        f = init_free_energy(bp)
-        iterate!(bp_generic; maxiter=10, tol=0.0, f)
         test_observables_bp(bp_generic)
-        @test sum(f) ≈ bethe_free_energy(bp_generic)
     end
 
     ms = bp
     ms_fast = bp_fast
-    f = init_free_energy(ms)
-    iterate_ms!(ms; maxiter=10, tol=0.0, f)
-    f_fast = init_free_energy(ms_fast)
-    iterate_ms!(ms_fast; maxiter=10, tol=0.0, f=f_fast)
+    iterate_ms!(ms; maxiter=10, tol=0.0)
+    iterate_ms!(ms_fast; maxiter=10, tol=0.0)
     @test beliefs_ms(ms) ≈ beliefs_ms(ms_fast)
     @test factor_beliefs_ms(ms) ≈ factor_beliefs_ms(ms_fast)
-    @test sum(f) ≈ bethe_free_energy_ms(ms_fast)
 end
 
 @testset "Ising infinite random regular" begin
     J  = 1.0
-    h = -0.2
+    h = -0.0
 
     kₐ = 2
     kᵢ = 3
     g = InfiniteRegularFactorGraph(kᵢ, kₐ)
     ψ = [IsingCoupling(J)]
     ϕ = [IsingField(h)]
-    bp = BP(g, ψ, 2; ϕ)
-    bp = fast_ising_bp(g, ψ, ϕ)
-    f = init_free_energy(bp)
-    iterate!(bp; maxiter=100, tol=1e-12, f)
-    @test sum(f) ≈ bethe_free_energy(bp)
+    bp = BP(g, ψ, (2,); ϕ)
+    iterate!(bp; maxiter=100, tol=1e-12)
 
     g2 = pairwise_interaction_graph(complete_graph(4))
-    bp2 = fast_ising_bp(g2, fill(IsingCoupling(J), 6), fill(IsingField(h), 4))
-    f2 = init_free_energy(bp2)
-    iterate!(bp2; maxiter=100, tol=1e-12, f=f2)
-    @test sum(f2) ≈ bethe_free_energy(bp2)
+    bp2 = BP(g2, fill(IsingCoupling(J), 6), fill(2, 4); ϕ=fill(IsingField(h), 4))
+    iterate!(bp2; maxiter=100, tol=1e-12)
 
     @test all(beliefs(bp)[1] ≈ beliefs(bp2)[i] for i in 1:4)
     @test all(factor_beliefs(bp)[1] ≈ factor_beliefs(bp2)[ij] for ij in 1:6)
@@ -171,10 +166,8 @@ end
     bp_float = BP(ising)
     bp = BP(bp_float.g, bp_float.ψ, bp_float.ϕ, [[1,1] for _ in bp_float.u],
         [[1,1] for _ in bp_float.h], [[1,1] for _ in bp_float.b])
-    f = init_free_energy(bp)
-    iterate_ms!(bp; maxiter=20, f, tol=0)
+    iterate_ms!(bp; maxiter=20, tol=0)
     e = avg_energy(avg_energy_ms, bp)
     e_ex = exact_minimum_energy(bp)
     @test e ≈ e_ex
-    @test e ≈ sum(f)
 end
