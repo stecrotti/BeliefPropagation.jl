@@ -128,7 +128,7 @@ end
 
 @testset "Ising infinite random regular" begin
     J  = 1.0
-    h = -0.0
+    h = -0.2
 
     kₐ = 2
     kᵢ = 3

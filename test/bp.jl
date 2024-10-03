@@ -46,7 +46,8 @@ end
     @test bfe ≈ bfe_messages
     @test exp(-bfe) ≈ exact_normalization(bp)
 
-    ms = rand_bp(rng, g, qs)
+    Random.seed!(0)
+    ms = rand_bp(g, qs)
     iterate_ms!(ms; maxiter=10, tol=0)
     bfe = bethe_free_energy_ms(ms)
     @test bfe ≈ exact_minimum_energy(ms)
