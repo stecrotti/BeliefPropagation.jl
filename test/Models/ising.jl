@@ -139,7 +139,7 @@ end
     iterate!(bp; maxiter=100, tol=1e-12)
 
     g2 = pairwise_interaction_graph(complete_graph(4))
-    bp2 = BP(g2, fill(IsingCoupling(J), 6), fill(2, 4); ϕ=fill(IsingField(h), 4))
+    bp2 = fast_ising_bp(g2, fill(IsingCoupling(J), 6), fill(IsingField(h), 4))
     iterate!(bp2; maxiter=100, tol=1e-12)
 
     @test all(beliefs(bp)[1] ≈ beliefs(bp2)[i] for i in 1:4)

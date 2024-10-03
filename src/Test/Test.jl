@@ -4,7 +4,7 @@ using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
 using BeliefPropagation
 using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
-    factor, factors, variables, neighbors
+    factor, factors, variables, neighbors, edge_indices
 
 using IndexedGraphs: degree
 using Test: @test
@@ -187,11 +187,12 @@ function test_observables_bp_generic(bp::BP, bp_generic::BP; kwargs...)
     return nothing
 end
 
+# factor update without autodiff
 function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, h) = bp
     ∂a = neighbors(g, factor(a))
-    ea = BeliefPropagation.FactorGraphs.edge_indices(g, factor(a))
+    ea = edge_indices(g, factor(a))
     ψₐ = ψ[a]
     for ai in ea
         unew[ai] .= 0

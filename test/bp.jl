@@ -87,3 +87,15 @@ end
     b = beliefs(bp)
     test_observables_bp(bp)
 end
+
+@testset "Old factor update" begin
+    n = 10
+    g = rand_tree_factor_graph(n)
+    qs = rand(rng, 2:4, nvariables(g))
+    bp = rand_bp(rng, g, qs)
+    bp2 = deepcopy(bp)
+    iterate!(bp; tol=1e-12)
+    iterate!(bp2; tol=1e-12, update_factor! = BeliefPropagation.Test.update_f_bp_old!)
+    @test bp2.u ≈ bp.u
+    @test bp2.h ≈ bp.h
+end
