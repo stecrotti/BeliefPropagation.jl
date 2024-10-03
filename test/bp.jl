@@ -1,5 +1,12 @@
 rng = MersenneTwister(0)
 
+@testset "Broadcasting" begin
+    bp = rand_bp(rand_factor_graph(10, 5, 0.5), fill(2,10))
+    dummy(x, y) = y
+    z = rand(10)
+    @test dummy.(bp, z) ==  dummy.((bp,), z)
+end
+
 @testset "Basic example - no ϕ factors" begin
     A = [0 1 1 0;
          1 0 0 0;
