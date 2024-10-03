@@ -18,7 +18,7 @@ This package implements the [Belief Propagation](https://en.wikipedia.org/wiki/B
 p(x_1,x_2,\ldots,x_n) \propto \prod_{a\in F} \psi_a(\underline{x}_a) \prod_{i\in V} \phi_i(x_i) 
 \end{equation}
 ```
-where $F$ is the set of factors, $V$ the set of variables, and $\underline{x}_a=\\{i\in V | \exists\\; \rm{edge}\\; (i,a)\\}$.
+where $F$ is the set of factors, $V$ the set of variables, and $\underline{x}_a$ is the set of variables involved in factor $a$.
 
 ## Installation
 ```julia
