@@ -5,7 +5,7 @@ Runs the max-sum algorithm (BP at zero temperature).
 """
 function iterate_ms!(bp::BP; kwargs...) 
     return iterate!(bp; update_variable! = update_v_ms!, update_factor! = update_f_ms!,
-        compute_fai! = compute_fai_ms!, kwargs...)
+        kwargs...)
 end
 
 function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real;
@@ -99,11 +99,4 @@ end
 
 function bethe_free_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     return avg_energy_ms(bp; fb, b)
-end
-
-function compute_fai_ms!(fai, bp::BPGeneric)
-    for (ai, uai, hia) in zip(eachindex(fai), bp.u, bp.h)
-        fai[ai] = -maximum(uaix + hiax for(uaix, hiax) in zip(uai, hia)) 
-    end
-    return nothing
 end
