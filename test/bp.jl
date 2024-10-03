@@ -34,7 +34,7 @@ end
     nfact, nvar = size(adjacency_matrix(g))
     qs = rand(rng, 2:4, nvar)
     bp = rand_bp(rng, g, qs)
-    iterate!(bp; maxiter=50, damp=0.0, tol=0)
+    iterate!(bp; maxiter=50, damp=0.1, tol=0)
     b = beliefs(bp)
     @test b ≈ exact_marginals(bp)
     bf = factor_beliefs(bp)

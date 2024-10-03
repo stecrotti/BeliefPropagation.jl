@@ -106,12 +106,12 @@ end
     iterate!(bp; maxiter=10, tol=0.0)
     test_observables_bp(bp)
     bp_fast = fast_ising_bp(g, ψ, ϕ)
-    iterate!(bp_fast; maxiter=10, tol=0.0)
+    iterate!(bp_fast; maxiter=20, tol=0, damp=0.1)
     test_observables_bp(bp_fast)
 
     bp_generic = make_generic(bp_fast)
     @test bp_generic isa BeliefPropagation.BPGeneric
-    iterate!(bp_generic, maxiter=10, tol=0)
+    iterate!(bp_generic, maxiter=20, tol=0)
     test_observables_bp_generic(bp_fast, bp_generic)
 
     @testset "Generic BP factor" begin
