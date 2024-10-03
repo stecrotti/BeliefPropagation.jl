@@ -149,12 +149,8 @@ Return a `BP` with random factors.
 
 `states` is an iterable containing the number of values that can be taken by each variable.
 """
-function rand_bp(rng::AbstractRNG, g::FactorGraph, states)
+function rand_bp(rng::AbstractRNG, g::AbstractFactorGraph, states)
     ψ = [rand_factor(rng, [states[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
-    return BP(g, ψ, states)  
-end
-function rand_bp(rng::AbstractRNG, g::InfiniteRegularFactorGraph, states)
-    ψ = [rand_factor(rng, fill(only(states), degree(g, factor(1))))] 
     return BP(g, ψ, states)  
 end
 rand_bp(g::AbstractFactorGraph, qs) = rand_bp(default_rng(), g, qs)
