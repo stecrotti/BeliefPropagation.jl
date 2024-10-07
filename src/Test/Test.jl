@@ -59,7 +59,7 @@ end
 """
     exact_prob(bp::BP; Z = exact_normalization(bp))
 
-    Exhaustively compute the probability of each possible configuration of the variables.
+Exhaustively compute the probability of each possible configuration of the variables.
 """
 function exact_prob(bp::BP; Z = exact_normalization(bp))
     p = [evaluate(bp, x) / Z for x in eachstate(bp)]
