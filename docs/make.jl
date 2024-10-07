@@ -10,11 +10,11 @@ base_url = "https://github.com/stecrotti/BeliefPropagation.jl/blob/main/"
 index_path = joinpath(@__DIR__, "src", "index.md")
 readme_path = joinpath(dirname(@__DIR__), "README.md")
 
-open(index_path, "w") do io
-    for line in eachline(readme_path)
-        println(io, line)
-    end
-end
+# open(index_path, "w") do io
+#     for line in eachline(readme_path)
+#         println(io, line)
+#     end
+# end
 
 makedocs(;
     modules=[
