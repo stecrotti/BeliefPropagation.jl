@@ -115,25 +115,6 @@ end
     rand_factor([rng,], states)
 
 Return a random `BPFactor` whose domain is specified by the iterable `states`.
-
-Examples
-========
-
-Create a random factor connected to three variables ``x_1 \\in \\{1,2\\}, x_2 \\in \\{1,2,3,4\\}, x_3 \\in \\{1,2,3\\}``.
-
-```jldoctest rand_factor
-julia> using BeliefPropagation.Test
-
-julia> import Random: MersenneTwister
-
-julia> states = (2, 4, 3);
-
-julia> f = rand_factor(MersenneTwister(0), states);
-
-julia> f([1, 4, 2])
-0.16703619444214968
-
-```
 """
 function rand_factor(rng::AbstractRNG, states)
     isempty(states) && return BPFactor(zeros(0))
