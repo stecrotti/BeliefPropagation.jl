@@ -21,7 +21,7 @@ where $F$ is the set of factors, $V$ the set of variables, and $\underline{x}_a$
 
 ## Installation
 ```julia
-import Pkg; Pkg.add("https://github.com/stecrotti/BeliefPropagation.jl.git")
+import Pkg; Pkg.add("BeliefPropagation")
 ```
 
 ## Quickstart
