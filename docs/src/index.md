@@ -37,3 +37,5 @@ Also, a version of BP for continuous variables such as Gaussian BP can be introd
 - [BeliefPropagation.jl](https://github.com/ArtLabBocconi/BeliefPropagation.jl): implements BP for the Ising model and the matching problem.
 - [FactorGraph.jl](https://github.com/mcosovic/FactorGraph.jl): implements Gaussian BP and other message-passing algorithms.
 - [ITensorNetworks.jl](https://github.com/ITensor/ITensorNetworks.jl): implements BP as a technique for approximate tensor network contraction.
+- [ReactiveMP.jl](https://github.com/ReactiveBayes/ReactiveMP.jl): allows to solve Bayesian inference problems using message-passing.
+- [CodingTheory](https://github.com/esabo/CodingTheory/blob/93505402aa1add7d8bb5f06bce24f9fd2bd6a560/src/LDPC/MP_decoders.jl): has a specialized implementation of BP for the coding problem
