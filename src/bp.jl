@@ -46,7 +46,7 @@ Constructor for the BP type.
 Arguments
 ========
 
-- `g`: a [`FactorGraph`]
+- `g`: a `FactorGraph`
 - `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
 - `states`: an iterable of integers of length equal to the number of variable nodes specifyig the number of values each variable can take 
 - `ϕ`: (optional) a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
@@ -244,13 +244,20 @@ E(\underline{x})=\sum_a \left[-\log\psi_a(\underline{x}_a)\right] + \sum_i \left
 ```
 of configuration `x`.
 """
-function energy(bp::BP, x)
-    (; g, ψ, ϕ) = bp
+energy(bp::BP, x) = energy_factors(bp, x) + energy_variables(bp, x)
+
+function energy_factors(bp::BP, x)
+    (; g, ψ) = bp
     w = 0.0
     for a in factors(g)
         ∂a = neighbors(g, factor(a))
         w += -log(ψ[a](x[∂a]))
     end
+    return w
+end
+function energy_variables(bp::BP, x)
+    (; g, ϕ) = bp
+    w = 0.0
     for i in variables(g)
         w += -log(ϕ[i](x[i]))
     end
