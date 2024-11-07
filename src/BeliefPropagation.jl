@@ -17,7 +17,7 @@ include("Models/Models.jl")
 include("Test/Test.jl")
 
 export BPFactor, TabulatedBPFactor, UniformFactor
-export BP, reset!, nstates, evaluate, energy
+export BP, reset!, nstates, evaluate, energy, energy_factors, energy_variables
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
 export message_convergence, belief_convergence
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp

@@ -13,9 +13,11 @@ using LinearAlgebra: Symmetric
 
 include("ising.jl")
 include("ksat.jl")
+include("coloring.jl")
 
 export IsingCoupling, IsingField, Ising
 export BP, fast_ising_bp
 export KSATClause
+export ColoringCoupling, SoftColoringCoupling
 
 end
