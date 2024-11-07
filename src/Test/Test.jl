@@ -98,7 +98,21 @@ Exhaustively compute the average energy (minus the log of the unnormalized proba
 """
 function exact_avg_energy(bp::BP; p_exact = exact_prob(bp))
     k = keys(p_exact)
-    sum(energy(bp, Tuple(k[x])) * p_exact[x] for x in eachindex(p_exact))
+    e = 0.0
+    for x in eachindex(p_exact)
+        ex = energy(bp, Tuple(k[x]))
+        p = p_exact[x]
+        if ex == Inf
+            if p == 0
+                nothing
+            else
+                error("Configuration with nonzero probability is giving infinite energy")
+            end
+        else
+            e += ex * p
+        end
+    end
+    return e
 end
 
 """
@@ -198,6 +212,12 @@ end
     test_za(ψₐ::BPFactor, states)
 
 Test a specific implementation of `compute_za` against the naive one.
+
+Arguments
+========
+
+- `ψₐ`: a `BPFactor`
+- `states`: an iterable of integers of length equal to the number of variables involved in the factor, specifyig the number of values each variable can take
 """
 function test_za(ψₐ::BPFactor, states;
         msg_in::AbstractVector{<:AbstractVector{<:Real}}=_rand_msgs(states))
@@ -206,8 +226,7 @@ function test_za(ψₐ::BPFactor, states;
     ψₐ_generic = BPFactor(ψₐ, states)
     za = BeliefPropagation.compute_za(ψₐ, msg_in)
     za_generic = BeliefPropagation.compute_za(ψₐ_generic, msg_in)
-    @test za ≈ za_generic
-    return nothing
+    return @test za ≈ za_generic
 end
 
 end # module
