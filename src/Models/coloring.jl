@@ -13,6 +13,8 @@ function BeliefPropagation.compute_za(ψₐ::ColoringCoupling,
     return z1 - z2
 end
 
+Base.eltype(f::ColoringCoupling) = typeof(f(1,1))
+
 struct SoftColoringCoupling{T<:Real} <: BPFactor
     β :: T
 end
@@ -30,3 +32,5 @@ function BeliefPropagation.compute_za(ψₐ::SoftColoringCoupling,
     z2 = (1 - exp(-ψₐ.β)) * sum(reduce(.*, msg_in))
     return z1 - z2
 end
+
+Base.eltype(f::SoftColoringCoupling) = typeof(f(1,1))

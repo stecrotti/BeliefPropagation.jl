@@ -5,7 +5,7 @@ An abstract type representing a factor.
 """
 abstract type BPFactor end
 
-Base.eltype(f::BPFactor) = typeof(float(1.0))
+Base.eltype(f::BPFactor) = typeof(f(1))
 
 """
     UniformFactor
