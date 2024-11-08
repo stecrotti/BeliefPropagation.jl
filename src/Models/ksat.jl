@@ -1,6 +1,18 @@
-# J = 1 if x appears negated, J = 0 otherwise (as in mezard montanari)
+@doc raw"""
+    KSATClause
+
+A type of [`BPFactor`](@ref) representing a clause in a k-SAT formula.
+It involves $\{0,1\}$ variables $\boldsymbol{x}_a=\{x_1, x_2, \ldots, x_k\}$.
+The factor evaluates to
+``\psi_a(\boldsymbol{x}_a)=1 - \prod_{i\in a}\left[1-\delta(x_i, J^a_{i})\right]``.
+
+Fields
+========
+
+- `J`: a vector of booleans.
+"""
 struct KSATClause{T}  <: BPFactor where {T<:AbstractVector{<:Bool}}
-    J :: T 
+    J :: T  # J = 1 if x appears negated, J = 0 otherwise (as in mezard montanari)
 end
 
 function (f::KSATClause)(x) 
