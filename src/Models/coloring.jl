@@ -2,7 +2,8 @@
     ColoringCoupling
 
 A type of [`BPFactor`](@ref) representing a factor in the coloring problem.
-It always involves two (discrete) incident variables $x_i$, $x_j$. The factor evaluates to
+It always involves two (discrete) incident variables $x_i$, $x_j$.
+The factor evaluates to
 ``\psi(x_i,x_j)=1-\delta(x_i,x_j)``
 """
 struct ColoringCoupling  <: BPFactor; end
@@ -32,7 +33,7 @@ It always involves two (discrete) incident variables $x_i$, $x_j$. The factor ev
 Fields
 ========
 
-- `β`: the real parameter controlling the softness. A `ColoringCoupling` is recovered in the large β limit.
+- `β`: the real parameter controlling the softness. A [`ColoringCoupling`](@ref) is recovered in the large β limit.
 """
 struct SoftColoringCoupling{T<:Real} <: BPFactor
     β :: T
