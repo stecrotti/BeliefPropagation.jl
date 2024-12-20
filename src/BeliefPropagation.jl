@@ -8,6 +8,7 @@ using Base.Threads: @threads
 using LogExpFunctions: xlogx, xlogy
 using BlockArrays: mortar
 using ForwardDiff: ForwardDiff
+using Random: rand!, AbstractRNG, default_rng
 
 include("bpfactor.jl")
 include("bp.jl")
@@ -17,7 +18,7 @@ include("Models/Models.jl")
 include("Test/Test.jl")
 
 export BPFactor, TabulatedBPFactor, UniformFactor
-export BP, reset!, nstates, evaluate, energy, energy_factors, energy_variables
+export BP, reset!, randomize!, nstates, evaluate, energy, energy_factors, energy_variables
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
 export message_convergence, belief_convergence
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp

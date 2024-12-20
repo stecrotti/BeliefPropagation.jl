@@ -82,6 +82,24 @@ function reset!(bp::BP)
     return nothing
 end
 
+function randomize!(rng::AbstractRNG, bp::BP)
+    (; u, h, b) = bp
+    for uai in u
+        rand!(rng, uai)
+        uai ./= sum(uai)
+    end
+    for hia in h
+        rand!(rng, hia)
+        hia ./= sum(hia)
+    end
+    for bi in b
+        rand!(rng, bi)
+        bi ./= sum(bi)
+    end
+    return nothing
+end
+randomize!(bp::BP) = randomize!(default_rng(), bp)
+
 """
     nstates(bp::BP, i::Integer)
 

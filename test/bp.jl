@@ -20,7 +20,8 @@ end
                 0.0 2.9 0.7 1.1])
     ψ = [ψ₁, ψ₂, ψ₃]
     bp = BP(g, ψ, states)
-    iterate!(bp; maxiter=2, tol=1e-12)
+    randomize!(bp)
+    iterate!(bp; maxiter=6, tol=1e-12)
     f_bethe = bethe_free_energy(bp)
     f_bethe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)
     @test f_bethe ≈ f_bethe_beliefs
