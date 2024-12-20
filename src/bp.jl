@@ -204,7 +204,8 @@ function compute_za(ψₐ::BPFactor, msg_in::AbstractVector{<:AbstractVector{<:R
         for xₐ in Iterators.product(eachindex.(msg_in)...))
 end
 
-function compute_zai(uai::AbstractVector{<:Real}, hia::AbstractVector{<:Real})
+function compute_zai(bp::BP, uai::AbstractVector{<:Real}, 
+        hia::AbstractVector{<:Real})
     return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
 end
 
@@ -228,7 +229,7 @@ function bethe_free_energy_bp(bp::BP)
     end
 
     for ai in edge_indices(g)
-        zₐᵢ = compute_zai(u[ai], h[ai])
+        zₐᵢ = compute_zai(bp, u[ai], h[ai])
         f_edges += -log(zₐᵢ)
     end
 

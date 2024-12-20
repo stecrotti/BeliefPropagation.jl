@@ -179,7 +179,7 @@ function BeliefPropagation.compute_za(ψₐ::IsingCoupling, msg_in::AbstractVect
     return cosh(Jₐ) * (1 + prodtanh)
 end
 
-function BeliefPropagation.compute_zai(uai::Real, hia::Real)
+function BeliefPropagation.compute_zai(bp::BPIsing, uai::Real, hia::Real)
     return (1 + tanh(uai)*tanh(hia)) / 2
 end
 
@@ -190,7 +190,6 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
-    # logzᵢ = abs(bnew[i]) - sum(abs, u[ei]; init=zero(eltype(bp)))
     b[i] = bnew[i]
     errv = -Inf
     for ia in ei
@@ -206,9 +205,8 @@ function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
     @views minh = cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
-    signs, prodsigns = cavity(sign.(h[ea]), *, sign(Jₐ))
+    signs, = cavity(sign.(h[ea]), *, sign(Jₐ))
     unew[ea] .= signs .* unew[ea]
-    # logzₐ = abs(Jₐ) - 2min(abs(Jₐ), minh)*(prodsigns!=1)
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
