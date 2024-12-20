@@ -296,7 +296,6 @@ abstract type ConvergenceChecker end
 struct MessageConvergence{T<:Real} <: ConvergenceChecker
     tol :: T
 end
-message_convergence(tol::Real) = MessageConvergence(tol)
 
 function (check_convergence::MessageConvergence)(::BP, errv, errf, errb)
     max(maximum(errv), maximum(errf)) < check_convergence.tol
@@ -309,6 +308,26 @@ belief_convergence(tol::Real) = BeliefConvergence(tol)
 
 function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
     maximum(errb) < check_convergence.tol
+end
+
+"""
+    ProgressCallback
+
+A callback that prints a progress bar monitoring iteration number and message convergence
+
+"""
+struct ProgressCallback{TP<:Progress, TF<:Real}
+    prog :: TP
+    tol  :: TF
+end
+function ProgressCallback(maxiter::Integer, tol::Real)
+    prog = Progress(maxiter; desc="Running BP", dt=2)
+    return ProgressCallback(prog, tol)
+end
+
+function (cb::ProgressCallback)(bp, errv, errf, errb, it)
+    ε = float(max(maximum(errv), maximum(errf)))
+    next!(cb.prog, showvalues=[(:it, "$it/$(cb.prog.n)"), (:ε, "$ε/$(cb.tol)")])
 end
 
 
@@ -334,8 +353,8 @@ function iterate!(bp::BP;
         update_variable! = update_v_bp!,
         update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        callback = (bp, errv, errf, errb, it) -> nothing,
-        check_convergence=message_convergence(tol),
+        callback = ProgressCallback(maxiter, tol),
+        check_convergence = MessageConvergence(tol),
         extra_kwargs...
         )
     (; g, u, h, b) = bp
