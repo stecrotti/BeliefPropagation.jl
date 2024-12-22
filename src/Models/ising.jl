@@ -168,18 +168,20 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     end
 end
 
-function BeliefPropagation.compute_zi(bp::BPIsing, i::Integer, msg_in::AbstractVector{T}, q::Integer) where T<:Real
+function BeliefPropagation.compute_zi(bp::BPIsing, i::Integer, 
+        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, variable(i))])
     bnew = sum(msg_in, init=bp.ϕ[i].βh) 
-    return 2cosh(bnew) / prod(2cosh(uai) for uai in msg_in; init=one(T))
+    return 2cosh(bnew) / prod(2cosh(uai) for uai in msg_in; init=one(eltype(bp)))
 end
 
-function BeliefPropagation.compute_za(bp::BPIsing, a::Integer, msg_in::AbstractVector{<:Real})
+function BeliefPropagation.compute_za(bp::BPIsing, a::Integer, 
+        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, factor(a))])
     Jₐ = bp.ψ[a].βJ
     prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
     return cosh(Jₐ) * (1 + prodtanh)
 end
 
-function BeliefPropagation.compute_zai(bp::BPIsing, uai::Real, hia::Real)
+function BeliefPropagation.compute_zai(bp::BPIsing, ai::Integer, uai::Real, hia::Real)
     return (1 + tanh(uai)*tanh(hia)) / 2
 end
 

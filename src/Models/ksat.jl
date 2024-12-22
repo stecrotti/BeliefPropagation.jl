@@ -21,7 +21,7 @@ function (f::KSATClause)(x)
 end
 
 function BeliefPropagation.compute_za(bp::BP{<:KSATClause}, a::Integer, 
-        msg_in::AbstractVector{<:AbstractVector{<:Real}})
+        msg_in = bp.h[edge_indices(bp.g, factor(a))])
     ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     z1 = prod(sum(hᵢₐ) for (hᵢₐ, Jₐᵢ) in zip(msg_in, ψₐ.J))
