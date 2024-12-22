@@ -119,7 +119,6 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
-    logzᵢ = log(2cosh(bnew[i]) / prod(2cosh(uai) for uai in u[ei]; init=one(eltype(bp))))
     b[i] = bnew[i]
     errv = -Inf
     for ia in ei
@@ -135,7 +134,6 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].βJ
     @views prodtanh = cavity!(unew[ea], tanh.(h[ea]), *, tanh(Jₐ))
-    zₐ = cosh(Jₐ) * (1 + prodtanh)
     unew[ea] .= atanh.(unew[ea])
     err = -Inf
     for ai in ea

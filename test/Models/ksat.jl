@@ -31,3 +31,30 @@ end
     xstar = argmax.(beliefs(bp))
     nunsat = sum(1 - Int(bp.ψ[a](xstar[i] for i in neighbors(bp.g, factor(a)))) for a in factors(bp.g))
 end
+
+@testset "ksat fast" begin
+    n = 10
+    m = 3
+    k = 3
+    g = rand_regular_factor_graph(rng, n, m, k)
+    ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
+    bp = fast_ksat_bp(g, ψ)
+    iterate!(bp; maxiter=50, tol=1e-10)
+    b = beliefs(bp)
+    fb = factor_beliefs(bp)
+    bp_slow = BP(g, ψ, fill(2, n))
+    iterate!(bp_slow; maxiter=50, tol=1e-10)
+    b_slow = beliefs(bp_slow)
+    fb_slow = factor_beliefs(bp_slow)
+    @test b ≈ b_slow
+    @test fb ≈ fb_slow
+    bfe = bethe_free_energy(bp)
+    bfe_slow = bethe_free_energy(bp_slow)
+    @test bfe ≈ bfe_slow
+    bfe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)
+    @test bfe ≈ bfe_beliefs
+
+    bp_generic = make_generic(bp)
+    iterate!(bp_generic, maxiter=20, tol=0)
+    test_observables_bp_generic(bp, bp_generic)
+end
