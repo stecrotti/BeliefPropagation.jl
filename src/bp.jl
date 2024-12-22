@@ -82,6 +82,11 @@ function reset!(bp::BP)
     return nothing
 end
 
+"""
+    randomize!([rng], bp::BP)
+
+Fill messages and belief with random values
+"""
 function randomize!(rng::AbstractRNG, bp::BP)
     (; u, h, b) = bp
     for uai in u
