@@ -39,6 +39,8 @@ end
     g = rand_regular_factor_graph(rng, n, m, k)
     ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
     bp = fast_ksat_bp(g, ψ)
+    reset!(bp)
+    randomize!(bp)
     iterate!(bp; maxiter=50, tol=1e-10)
     b = beliefs(bp)
     fb = factor_beliefs(bp)

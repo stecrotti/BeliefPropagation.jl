@@ -35,6 +35,7 @@ const BPKSAT = BP{<:KSATClause, <:BPFactor, <:NTuple{2,<:Real}, <:NTuple{2,<:Rea
 @doc raw"""
     fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause}, [ϕ])
 
+Return a specialized BP instance with `KSATClause` and messages encoded as tuples of two reals instead of vectors. 
 ```
 """
 function fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause},
@@ -55,9 +56,9 @@ Base.eltype(bp::BPKSAT) = eltype(eltype(eltype(bp.b)))
 function BeliefPropagation.reset!(bp::BPKSAT)
     (; u, h, b) = bp
     T = eltype(bp)
-    u .= (T(0.5), T(0.5))
-    h .= (T(0.5), T(0.5))
-    b .= (T(0.5), T(0.5))
+    u .= ((T(0.5), T(0.5)),)
+    h .= ((T(0.5), T(0.5)),)
+    b .= ((T(0.5), T(0.5)),)
     return nothing
 end
 function BeliefPropagation.randomize!(rng::AbstractRNG, bp::BPKSAT)
@@ -68,7 +69,7 @@ function BeliefPropagation.randomize!(rng::AbstractRNG, bp::BPKSAT)
         u[ia] = (ru, 1-ru)
         h[ia] = (rh, 1-rh)
     end
-    b .= (T(0.5), T(0.5))
+    b .= ((T(0.5), T(0.5)),)
     return nothing
 end
 
