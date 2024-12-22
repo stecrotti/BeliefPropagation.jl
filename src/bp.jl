@@ -209,27 +209,28 @@ function bethe_free_energy_bp_beliefs(bp::BP;
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
-function compute_zi(bp::BP, i::Integer, msg_in::AbstractVector{<:AbstractVector{<:Real}},
-        q::Integer)
-    init = [bp.ϕ[i](x) for x in 1:q]
+function compute_zi(bp::BP, i::Integer, 
+        msg_in = bp.u[edge_indices(bp.g, variable(i))])
+    init = [bp.ϕ[i](x) for x in 1:nstates(bp, i)]
     bnew = reduce(.*, msg_in; init)
     return sum(bnew)
 end
 
-function compute_za(bp::BP, a::Integer, msg_in::AbstractVector{<:AbstractVector{<:Real}})
+function compute_za(bp::BP, a::Integer, 
+    msg_in = bp.h[edge_indices(bp.g, factor(a))])
     ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
         for xₐ in Iterators.product(eachindex.(msg_in)...))
 end
 
-function compute_zai(bp::BP, uai::AbstractVector{<:Real}, 
-        hia::AbstractVector{<:Real})
+function compute_zai(bp::BP, ai::Integer, 
+        uai = bp.u[ai], hia = bp.h[ai])
     return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
 end
 
 function bethe_free_energy_bp(bp::BP)
-    (; g, ψ, ϕ, h, u) = bp
+    (; g, h, u) = bp
     corr_factors = _free_energy_correction_factors(bp)
     corr_edges = _free_energy_correction_edges(bp)
 
@@ -243,12 +244,12 @@ function bethe_free_energy_bp(bp::BP)
 
     for i in variables(g)
         ei = edge_indices(g, variable(i))
-        zᵢ = compute_zi(bp, i, u[ei], nstates(bp, i))
+        zᵢ = compute_zi(bp, i, u[ei])
         f_variables += -log(zᵢ)
     end
 
     for ai in edge_indices(g)
-        zₐᵢ = compute_zai(bp, u[ai], h[ai])
+        zₐᵢ = compute_zai(bp, ai, u[ai], h[ai])
         f_edges += -log(zₐᵢ)
     end
 
