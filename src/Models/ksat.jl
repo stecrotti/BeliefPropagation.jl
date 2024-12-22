@@ -20,8 +20,9 @@ function (f::KSATClause)(x)
     return any(xᵢ - 1 != Jₐᵢ for (xᵢ, Jₐᵢ) in zip(x, f.J)) |> float
 end
 
-function BeliefPropagation.compute_za(ψₐ::KSATClause, 
+function BeliefPropagation.compute_za(bp::BP{<:KSATClause}, a::Integer, 
         msg_in::AbstractVector{<:AbstractVector{<:Real}})
+    ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     z1 = prod(sum(hᵢₐ) for (hᵢₐ, Jₐᵢ) in zip(msg_in, ψₐ.J))
     z2 = prod(hᵢₐ[Jₐᵢ+1] for (hᵢₐ, Jₐᵢ) in zip(msg_in, ψₐ.J))

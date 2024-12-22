@@ -209,24 +209,21 @@ function _rand_msgs(states)
 end
 
 """
-    test_za(ψₐ::BPFactor, states)
+    test_za(bp::BP)
 
 Test a specific implementation of `compute_za` against the naive one.
-
-Arguments
-========
-
-- `ψₐ`: a `BPFactor`
-- `states`: an iterable of integers of length equal to the number of variables involved in the factor, specifyig the number of values each variable can take
 """
-function test_za(ψₐ::BPFactor, states;
-        msg_in::AbstractVector{<:AbstractVector{<:Real}}=_rand_msgs(states))
-
-    length(states) == length(msg_in) || throw(ArgumentError("states and msg_in must have same length"))
-    ψₐ_generic = BPFactor(ψₐ, states)
-    za = BeliefPropagation.compute_za(ψₐ, msg_in)
-    za_generic = BeliefPropagation.compute_za(ψₐ_generic, msg_in)
-    return @test za ≈ za_generic
+function test_za(bp::BP)
+    (; g) = bp
+    bp_generic = make_generic(bp)
+    eq = map(factors(g)) do a
+        states = (nstates(bp,i) for i in neighbors(g, factor(a)))
+        msg_in = _rand_msgs(states)
+        za = BeliefPropagation.compute_za(bp, a, msg_in)
+        za_generic = BeliefPropagation.compute_za(bp_generic, a, msg_in)
+        za ≈ za_generic
+    end |> all
+    return @test all(eq)
 end
 
 end # module

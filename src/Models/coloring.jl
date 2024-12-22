@@ -13,7 +13,7 @@ function (f::ColoringCoupling)(x)
     return float(x[1] != x[2])
 end
 
-function BeliefPropagation.compute_za(ψₐ::ColoringCoupling, 
+function BeliefPropagation.compute_za(bp::BP{<:ColoringCoupling}, a::Integer, 
         msg_in::AbstractVector{<:AbstractVector{<:Real}})
     length(msg_in) == 2 || throw(ArgumentError("ColoringCoupling is defined for 2 neighbors, got $(length(msg_in)) incoming messages."))
     z1 = prod(sum.(msg_in))
@@ -50,11 +50,11 @@ function (f::SoftColoringCoupling)(x)
     return exp(-f.β * e)
 end
 
-function BeliefPropagation.compute_za(ψₐ::SoftColoringCoupling, 
+function BeliefPropagation.compute_za(bp::BP{<:SoftColoringCoupling}, a::Integer, 
         msg_in::AbstractVector{<:AbstractVector{<:Real}})
     length(msg_in) == 2 || throw(ArgumentError("SoftColoringCoupling is defined for 2 neighbors, got $(length(msg_in)) incoming messages."))
     z1 = prod(sum.(msg_in))
-    z2 = (1 - exp(-ψₐ.β)) * sum(reduce(.*, msg_in))
+    z2 = (1 - exp(-bp.ψ[a].β)) * sum(reduce(.*, msg_in))
     return z1 - z2
 end
 

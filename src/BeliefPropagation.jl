@@ -7,7 +7,7 @@ using CavityTools: cavity!
 using Base.Threads: @threads
 using LogExpFunctions: xlogx, xlogy
 using BlockArrays: mortar
-using ForwardDiff: ForwardDiff
+using ForwardDiff: ForwardDiff, value
 using ProgressMeter: Progress, next!
 using Random: rand!, AbstractRNG, default_rng
 
