@@ -168,13 +168,13 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     end
 end
 
-function BeliefPropagation.compute_zi(ϕᵢ::IsingField, msg_in::AbstractVector{T}, q::Integer) where T<:Real
-    bnew = sum(msg_in, init=ϕᵢ.βh) 
+function BeliefPropagation.compute_zi(bp::BPIsing, i::Integer, msg_in::AbstractVector{T}, q::Integer) where T<:Real
+    bnew = sum(msg_in, init=bp.ϕ[i].βh) 
     return 2cosh(bnew) / prod(2cosh(uai) for uai in msg_in; init=one(T))
 end
 
-function BeliefPropagation.compute_za(ψₐ::IsingCoupling, msg_in::AbstractVector{<:Real})
-    Jₐ = ψₐ.βJ
+function BeliefPropagation.compute_za(bp::BPIsing, a::Integer, msg_in::AbstractVector{<:Real})
+    Jₐ = bp.ψ[a].βJ
     prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
     return cosh(Jₐ) * (1 + prodtanh)
 end

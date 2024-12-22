@@ -4,10 +4,8 @@ rng = MersenneTwister(1)
     n = 3
     g = rand_tree_factor_graph(rng, n)
     ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
-    for a in factors(g)
-        test_za(ψ[a], fill(2, degree(g, factor(a))))
-    end
     bp = BP(g, ψ, fill(2, nvariables(g)))
+    test_za(bp)
     iterate!(bp; maxiter=10, tol=0.0)
     test_observables_bp(bp)
 
@@ -26,11 +24,9 @@ end
     k = 3
     g = rand_regular_factor_graph(rng, n, m, k)
     ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
-    for a in factors(g)
-        test_za(ψ[a], fill(2, degree(g, factor(a))))
-    end
     ϕ = [BPFactor(1.0 .+ 1e-4 * randn(2)) for _ in variables(g)]
     bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
+    test_za(bp)
     iterate!(bp; maxiter=100, tol=1e-12, rein=1e-2)
     xstar = argmax.(beliefs(bp))
     nunsat = sum(1 - Int(bp.ψ[a](xstar[i] for i in neighbors(bp.g, factor(a)))) for a in factors(bp.g))

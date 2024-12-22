@@ -1,7 +1,5 @@
 @testset "Coloring factor" begin
-    test_za(ColoringCoupling(), [3, 3])
     β = 100
-    test_za(SoftColoringCoupling(β), [4, 4])
     # Soft coloring is equivalent to Coloring in the large β limit
     @test all(
         isapprox(ColoringCoupling()((xᵢ, xⱼ)), SoftColoringCoupling(β)((xᵢ, xⱼ)); atol=1e-14)
@@ -36,6 +34,7 @@ end
     z = exp(-bfe)
     z_ex = exact_normalization(bp)
     @test z ≈ z_ex
+    test_za(bp)
 end
 
 @testset "Soft coloring random tree" begin
@@ -65,4 +64,5 @@ end
     z = exp(-bfe)
     z_ex = exact_normalization(bp)
     @test z ≈ z_ex
+    test_za(bp)
 end

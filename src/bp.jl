@@ -209,14 +209,15 @@ function bethe_free_energy_bp_beliefs(bp::BP;
 end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
-function compute_zi(ϕᵢ::BPFactor, msg_in::AbstractVector{<:AbstractVector{<:Real}},
+function compute_zi(bp::BP, i::Integer, msg_in::AbstractVector{<:AbstractVector{<:Real}},
         q::Integer)
-    init = [ϕᵢ(x) for x in 1:q]
+    init = [bp.ϕ[i](x) for x in 1:q]
     bnew = reduce(.*, msg_in; init)
     return sum(bnew)
 end
 
-function compute_za(ψₐ::BPFactor, msg_in::AbstractVector{<:AbstractVector{<:Real}})
+function compute_za(bp::BP, a::Integer, msg_in::AbstractVector{<:AbstractVector{<:Real}})
+    ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
         for xₐ in Iterators.product(eachindex.(msg_in)...))
@@ -236,13 +237,13 @@ function bethe_free_energy_bp(bp::BP)
 
     for a in factors(g)
         ea = edge_indices(g, factor(a))
-        zₐ = compute_za(ψ[a], h[ea])
+        zₐ = compute_za(bp, a, h[ea])
         f_factors += -log(zₐ)
     end
 
     for i in variables(g)
         ei = edge_indices(g, variable(i))
-        zᵢ = compute_zi(ϕ[i], u[ei], nstates(bp, i))
+        zᵢ = compute_zi(bp, i, u[ei], nstates(bp, i))
         f_variables += -log(zᵢ)
     end
 
@@ -326,7 +327,7 @@ function ProgressCallback(maxiter::Integer, tol::Real)
 end
 
 function (cb::ProgressCallback)(bp, errv, errf, errb, it)
-    ε = float(max(maximum(errv), maximum(errf)))
+    ε = value(max(maximum(errv), maximum(errf)))
     next!(cb.prog, showvalues=[(:it, "$it/$(cb.prog.n)"), (:ε, "$ε/$(cb.tol)")])
 end
 
@@ -381,7 +382,7 @@ function damp!(x::Real, xnew::Real, damp::Real)
     return xnew * (1-damp) + x * damp
 end
 
-function damp!(x::T, xnew::T, damp::Real) where {T<:AbstractVector}
+function damp!(x::T, xnew::T, damp::Real) where {T<:Union{<:AbstractVector,<:Tuple}}
     0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
     if damp != 0
         for (xi, xinew) in zip(x, xnew)
@@ -413,7 +414,7 @@ function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::R
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
-    errv, errb= set_messages_variable!(bp, ei, i, hnew, bnew, damp)
+    errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
 end
 
@@ -437,7 +438,7 @@ function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real;
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
     res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)
-    ForwardDiff.gradient!(res, hflat -> compute_za(ψₐ, hflat.blocks), hflat)
+    ForwardDiff.gradient!(res, hflat -> compute_za(bp, a, hflat.blocks), hflat)
     err = set_messages_factor!(bp, ea, unew, damp)
     return err
 end
