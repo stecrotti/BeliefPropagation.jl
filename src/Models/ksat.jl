@@ -75,13 +75,27 @@ end
 
 function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew, damp)
     (; h, b) = bp
+    T = eltype(bp)
     zᵢ = sum(bnew[i])
-    bnew[i] = bnew[i] ./ zᵢ
+    if zᵢ == 0
+        # there can be cases where bnew[i] is all zeros -> uniform belief
+        bnew[i] = (T(0.5), T(0.5))
+    else
+        bnew[i] = bnew[i] ./ zᵢ
+    end
     errb = maximum(abs, bnew[i] .- b[i])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
     for ia in ei
-        hnew[ia] = hnew[ia] ./ sum(hnew[ia])
+        zᵢ₂ₐ = sum(hnew[ia])
+        if zᵢ == 0
+            # there can be cases where hnew[i] is all zeros -> set message to random value
+            #  instead of uniform to avoid triggering the convergence criterion
+            r = rand(T)
+            hnew[ia] = (r, 1-r)
+        else
+            hnew[ia] = hnew[ia] ./ zᵢ₂ₐ
+        end
         errv = max(errv, maximum(abs, hnew[ia] .- h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
@@ -125,9 +139,10 @@ function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real
         htemp *= h[ia][Jₐ[α]+1]
     end
     for (α, ia) in enumerate(ea)
-        x = unew[ia][1]
-        y = x*(1-Jₐ[α])
-        unew[ia] = (1/(2-x), (1-y)/(2-x))
+        prodh = unew[ia][1]
+        u0 = (1 - prodh*(1-Jₐ[α])) / (2-prodh)
+        u1 = (1 - prodh*Jₐ[α]) / (2-prodh)
+        unew[ia] = (u0, u1)   
     end
 
     err = set_messages_factor!(bp, ea, unew, damp)
