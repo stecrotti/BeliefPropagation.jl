@@ -1,39 +1,51 @@
 using BeliefPropagation, BeliefPropagation.Models
 using Random, IndexedFactorGraphs
 
-rng = MersenneTwister(0)
+Random.seed!(0)
 
-
-ns = [100, 1000, 10000]
-alphas = 03.6:0.1:4.2
+ns = 2 .^ (7:2:11)
+αs = 3.5:0.1:4.6
 nsamples = 50
-nunsats = [[zeros(Int, nsamples) for _ in alphas] for _ in ns]
+nunsats = [[zeros(Int, nsamples) for _ in αs] for _ in ns]
+niters = [[zeros(Int, nsamples) for _ in αs] for _ in ns]
 const k = 3
 
 for (i,n) in enumerate(ns)
-    for (j, alpha) in enumerate(alphas)
-        m = round(Int, n*alpha)
-        for k in 1:nsamples
-            g = rand_regular_factor_graph(rng, n, m, k)
-            ψ = [KSATClause(bitrand(rng, length(neighbors(g, factor(a))))) for a in factors(g)]
+    println("Size $i of $(length(ns))")
+    for (j, α) in enumerate(αs)
+        m = round(Int, n*α)
+        for l in 1:nsamples
+            g = rand_regular_factor_graph(n, m, k)
+            ψ = [KSATClause(bitrand(length(neighbors(g, factor(a))))) for a in factors(g)]
             bp = fast_ksat_bp(g, ψ)
-            iters = iterate!(bp; maxiter=1000, tol=1e-10, rein=5e-2)
+            iters = iterate!(bp; maxiter=2000, tol=1e-6, rein=5e-4)
             xstar = argmax.(beliefs(bp))   
-            nunsat = sum(!(Bool(bp.ψ[a](xstar[i]+1 for i in neighbors(bp.g, factor(a))))) 
+            nunsat = sum(!Bool(bp.ψ[a](xstar[i] for i in neighbors(bp.g, factor(a)))) 
                 for a in factors(bp.g))
-            nunsats[i][j][k] = nunsat
+            nunsats[i][j][l] = nunsat
+            niters[i][j][l] = iters
         end
-        println("\tFinished alpha $j of $(length(alphas))")
+        println("\tFinished α $j of $(length(αs))")
     end
-    println("Finished n $i of $(length(ns))")
 end
 
 
 using Plots, ColorSchemes, Statistics
 
 cg = cgrad(:matter, length(ns)+1, categorical=true)
-pl = plot(; xlabel="α", ylabel="prob SAT")
+pl = plot(; xlabel="α", ylabel="SAT fraction")
 for (i,n) in enumerate(ns)
-    plot!(pl, alphas, mean.(isequal(0), nunsats[i]), c=cg[i+1], label="n=$n", m=:o)
+    x = map.(isequal(0), nunsats[i])
+    plot!(pl, αs, mean.(x), yerr = std.(x) ./ sqrt(nsamples),
+        c=cg[i+1], label="n=$n", m=:o)
 end
-pl
+
+savefig(pl, (@__DIR__)*"/rand_ksat.pdf")
+
+pl = plot(; xlabel="α", ylabel="# iterations")
+for (i,n) in enumerate(ns)
+    x = niters[i]
+    plot!(pl, αs, mean.(x), yerr = std.(x) ./ sqrt(nsamples),
+        c=cg[i+1], label="n=$n", m=:o)
+end
+savefig(pl, (@__DIR__)*"/rand_ksat_iters.pdf")
