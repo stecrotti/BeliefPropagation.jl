@@ -77,10 +77,8 @@ function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew,
     (; h, b) = bp
     T = eltype(bp)
     zᵢ = sum(bnew[i])
-    if zᵢ == 0
+    if zᵢ != 0
         # there can be cases where bnew[i] is all zeros -> uniform belief
-        bnew[i] = (T(0.5), T(0.5))
-    else
         bnew[i] = bnew[i] ./ zᵢ
     end
     errb = maximum(abs, bnew[i] .- b[i])
@@ -88,12 +86,8 @@ function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew,
     errv = zero(eltype(bp))
     for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
-        if zᵢ == 0
-            # there can be cases where hnew[i] is all zeros -> set message to random value
-            #  instead of uniform to avoid triggering the convergence criterion
-            r = rand(T)
-            hnew[ia] = (r, 1-r)
-        else
+        if zᵢ != 0
+            # there can be cases where hnew[i] is all zeros -> do not normalize
             hnew[ia] = hnew[ia] ./ zᵢ₂ₐ
         end
         errv = max(errv, maximum(abs, hnew[ia] .- h[ia]))
