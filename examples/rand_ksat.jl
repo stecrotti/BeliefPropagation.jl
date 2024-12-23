@@ -11,21 +11,21 @@ niters = [[zeros(Int, nsamples) for _ in αs] for _ in ns]
 const k = 3
 
 for (i,n) in enumerate(ns)
-    println("Size $i of $(length(ns))")
+    println("Size n=$n: $i of $(length(ns))")
     for (j, α) in enumerate(αs)
         m = round(Int, n*α)
         for l in 1:nsamples
             g = rand_regular_factor_graph(n, m, k)
             ψ = [KSATClause(bitrand(length(neighbors(g, factor(a))))) for a in factors(g)]
             bp = fast_ksat_bp(g, ψ)
-            iters = iterate!(bp; maxiter=2000, tol=1e-6, rein=5e-4)
+            iters = iterate!(bp; maxiter=2000, tol=1e-6, rein=1e-4)
             xstar = argmax.(beliefs(bp))   
             nunsat = sum(!Bool(bp.ψ[a](xstar[i] for i in neighbors(bp.g, factor(a)))) 
                 for a in factors(bp.g))
             nunsats[i][j][l] = nunsat
             niters[i][j][l] = iters
         end
-        println("\tFinished α $j of $(length(αs))")
+        println("\tFinished α=$α: $j of $(length(αs))")
     end
 end
 
