@@ -7,7 +7,7 @@ For many models one can devise more efficient implementations.
 To integrate these with the BeliefPropagation.jl API, users can define a new `BPFactor` and override existing methods by dispatching on the factor type.
 The minimum required API for a custom `MyFactor <: BPFactor` is:
 - `(f::MyFactor)(x)`: a functor evaluating the factor for a given input `x`
-- `BeliefPropagation.compute_za(ψₐ::MyFactor, msg_in)` which computes the factor normalization
+- `BeliefPropagation.compute_za(bp::{<:MyFactor}, a::Integer, msg_in)` which computes the factor normalization
 ```math
 \begin{equation*}
 z_a = \sum_{\underline{x}_a} \psi_a(\underline{x}_a) \prod_{i\in\partial a} h_{i\to a}(x_i)

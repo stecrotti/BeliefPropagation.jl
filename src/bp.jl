@@ -6,7 +6,7 @@ A type representing the state of the Belief Propagation algorithm.
 Fields
 ========
 
-- `g`: a [`FactorGraph`]
+- `g`: a [`FactorGraph`](@ref)
 - `ψ`: a vector of [`BPFactor`](@ref) representing the factors {ψₐ(xₐ)}ₐ
 - `ϕ`: a vector of [`BPFactor`](@ref) representing the single-variable factors {ϕᵢ(xᵢ)}ᵢ
 - `u`: messages from factor to variable
