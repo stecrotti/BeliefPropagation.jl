@@ -126,8 +126,8 @@ function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real
     end
     for (α, ia) in enumerate(ea)
         x = unew[ia][1]
-        y = (1 - x*(1-Jₐ[α])) / (2-x)
-        unew[ia] = (y, 1-y)
+        y = x*(1-Jₐ[α])
+        unew[ia] = (1/(2-x), (1-y)/(2-x))
     end
 
     err = set_messages_factor!(bp, ea, unew, damp)
