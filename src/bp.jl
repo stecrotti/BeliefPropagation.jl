@@ -297,44 +297,68 @@ Return the unnormalized probability ``\\prod_a\\psi_a(\\underline{x}_a)\\prod_i\
 """
 evaluate(bp::BP, x) = exp(-energy(bp, x))
 
+"""
+    abstract type ConvergenceChecker
 
-abstract type ConvergenceChecker end
+Subtypes such as [`MessageConvergence`](@ref) compute convergence errors
+"""
+abstract type ConvergenceChecker; end
 
-struct MessageConvergence{T<:Real} <: ConvergenceChecker
-    tol :: T
-end
+"""
+    MessageConvergence
 
-function (check_convergence::MessageConvergence)(::BP, errv, errf, errb)
-    max(maximum(errv), maximum(errf)) < check_convergence.tol
-end
-
-struct BeliefConvergence{T<:Real} <: ConvergenceChecker
-    tol :: T
-end
-belief_convergence(tol::Real) = BeliefConvergence(tol)
-
-function (check_convergence::BeliefConvergence)(::BP, errv, errf, errb)
-    maximum(errb) < check_convergence.tol
+Called after an iteration in a callback, it computes the maximum absolute change in messages with `(::MessageConvergence)(::BP, errv, errf, errb, it)`
+"""
+struct MessageConvergence <: ConvergenceChecker; end
+function (::MessageConvergence)(::BP, errv, errf, errb, it)
+    return max(maximum(errv), maximum(errf))
 end
 
 """
-    ProgressCallback
+    BeliefConvergence
 
-A callback that prints a progress bar monitoring iteration number and message convergence
+Called after an iteration in a callback, it computes the maximum absolute change in beliefs with `(::BeliefConvergence)(::BP, errv, errf, errb, it)`
+"""
+struct BeliefConvergence <: ConvergenceChecker; end
+function (::BeliefConvergence)(::BP, errv, errf, errb, it)
+    return maximum(errb)
+end
 
 """
-struct ProgressCallback{TP<:Progress, TF<:Real}
-    prog :: TP
-    tol  :: TF
+    abstract type Callback
+
+Subtypes can be used as callbacks during the iterations.
+"""
+abstract type Callback end
+
+"""
+    ProgressAndConvergence <: Callback
+
+A basic callback that prints a progress bar and checks convergence.
+
+Fields
+========
+
+- `prog`: a `Progress` from ProgressMeter.jl
+- `tol`: the tolerance below which BP is considered at a fixed point
+- `conv_checker`: a [`ConvergenceChecker`](@ref) 
+"""
+struct ProgressAndConvergence{TP<:Progress, TF<:Real, TC<:ConvergenceChecker} <: Callback
+    prog         :: TP
+    tol          :: TF
+    conv_checker :: TC
 end
-function ProgressCallback(maxiter::Integer, tol::Real)
+function ProgressAndConvergence(maxiter::Integer, tol::Real, 
+        conv_checker::ConvergenceChecker=MessageConvergence())
     prog = Progress(maxiter; desc="Running BP", dt=2)
-    return ProgressCallback(prog, tol)
+    return ProgressAndConvergence(prog, tol, conv_checker)
 end
 
-function (cb::ProgressCallback)(bp, errv, errf, errb, it)
-    ε = value(max(maximum(errv), maximum(errf)))
+function (cb::ProgressAndConvergence)(bp, errv, errf, errb, it)
+    ε = cb.conv_checker(bp, errv, errf, errb, it)
     next!(cb.prog, showvalues=[(:it, "$it/$(cb.prog.n)"), (:ε, "$ε/$(cb.tol)")])
+    has_converged = ε < cb.tol
+    return has_converged
 end
 
 
@@ -352,16 +376,14 @@ Optional arguments
 - `tol`: convergence check parameter
 - `damp`: damping parameter
 - `rein`: reinforcement parameter
-- `callback`
-- `check_convergence`: a function that checks if convergence has been reached
+- `callbacks`: a vector of callbacks. By default a [`ProgressAndConvergence`](@ref)
 - extra arguments to be passed to custom `update_variable!` and `update_factor!`
 """
 function iterate!(bp::BP;
         update_variable! = update_v_bp!,
         update_factor! = update_f_bp!,
         maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        callback = ProgressCallback(maxiter, tol),
-        check_convergence = MessageConvergence(tol),
+        callbacks::AbstractVector{<:Callback} = [ProgressAndConvergence(maxiter, tol)],
         extra_kwargs...
         )
     (; g, u, h, b) = bp
@@ -376,8 +398,9 @@ function iterate!(bp::BP;
         @threads for i in variables(bp.g)
             errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; extra_kwargs...)
         end
-        callback(bp, errv, errf, errb, it)
-        check_convergence(bp, errv, errf, errb) && return it
+        for callback in callbacks
+            callback(bp, errv, errf, errb, it) && return it
+        end
     end
     return maxiter
 end
