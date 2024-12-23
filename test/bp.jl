@@ -92,7 +92,8 @@ end
     g = rand_tree_factor_graph(n)
     qs = rand(rng, 2:4, nvariables(g))
     bp = rand_bp(rng, g, qs)
-    iterate!(bp; maxiter=100, check_convergence=belief_convergence(1e-12))
+    cb = ProgressAndConvergence(100, 0.0, BeliefConvergence())
+    iterate!(bp; callbacks = [cb])
     b = beliefs(bp)
     test_observables_bp(bp)
 end
