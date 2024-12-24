@@ -297,6 +297,20 @@ Return the unnormalized probability ``\\prod_a\\psi_a(\\underline{x}_a)\\prod_i\
 """
 evaluate(bp::BP, x) = exp(-energy(bp, x))
 
+
+"""
+    abstract type Callback
+
+Subtypes can be used as callbacks during the iterations.
+The signature is 
+```
+callback(bp, errv, errf, errb, it) -> false
+```
+Returning `true` stops the iterations.
+"""
+abstract type Callback end
+
+
 """
     abstract type ConvergenceChecker
 
@@ -324,17 +338,6 @@ function (::BeliefConvergence)(::BP, errv, errf, errb, it)
     return maximum(errb)
 end
 
-"""
-    abstract type Callback
-
-Subtypes can be used as callbacks during the iterations.
-The signature is 
-```
-callback(bp, errv, errf, errb, it) -> false
-```
-Returning `true` stops the iterations.
-"""
-abstract type Callback end
 
 """
     ProgressAndConvergence <: Callback
