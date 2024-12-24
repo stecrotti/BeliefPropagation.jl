@@ -60,3 +60,20 @@ end
     iterate!(bp_generic, maxiter=20, tol=0)
     test_observables_bp_generic(bp, bp_generic)
 end
+
+@testset "Decimation" begin
+    n = 10
+    m = 3
+    k = 3
+    g = rand_regular_factor_graph(rng, n, m, k)
+    ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
+    ϕ = [BPFactor(1.0 .+ 1e-4 * randn(2)) for _ in variables(g)]
+    bp = BP(g, ψ, fill(2, nvariables(g)); ϕ)
+    iterate_ms!(bp)
+    b_ms = argmax.(beliefs_ms(bp))
+    reset!(bp)
+    cb = Decimation(n, 1e-8)
+    iterate!(bp; callbacks = [cb])
+    b_dec = argmax.(beliefs_ms(bp))
+    @test b_ms == b_dec
+end

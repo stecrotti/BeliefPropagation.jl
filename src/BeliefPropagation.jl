@@ -14,6 +14,7 @@ using Random: rand!, AbstractRNG, default_rng
 include("bpfactor.jl")
 include("bp.jl")
 include("maxsum.jl")
+include("decimation.jl")
 
 include("Models/Models.jl")
 include("Test/Test.jl")
@@ -25,5 +26,6 @@ export MessageConvergence, BeliefConvergence, ProgressAndConvergence
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp
 export update_f_ms!, update_v_ms!, beliefs_ms, factor_beliefs_ms, iterate_ms!,
     avg_energy_ms, bethe_free_energy_ms
+export Decimation
 
 end
