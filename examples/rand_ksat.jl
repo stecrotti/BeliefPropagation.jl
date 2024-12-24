@@ -3,8 +3,8 @@ using Random, IndexedFactorGraphs
 
 Random.seed!(0)
 
-ns = 2 .^ (7:2:11)
-αs = 3.5:0.1:4.6
+ns = 2 .^ (9:2:13)
+αs = 3.7:0.05:4.4
 nsamples = 50
 nunsats = [[zeros(Int, nsamples) for _ in αs] for _ in ns]
 niters = [[zeros(Int, nsamples) for _ in αs] for _ in ns]
@@ -18,7 +18,7 @@ for (i,n) in enumerate(ns)
             g = rand_regular_factor_graph(n, m, k)
             ψ = [KSATClause(bitrand(length(neighbors(g, factor(a))))) for a in factors(g)]
             bp = fast_ksat_bp(g, ψ)
-            iters = iterate!(bp; maxiter=2000, tol=1e-6, rein=1e-4)
+            iters = iterate!(bp; maxiter=2000, tol=1e-6, rein=1e-3)
             xstar = argmax.(beliefs(bp))   
             nunsat = sum(!Bool(bp.ψ[a](xstar[i] for i in neighbors(bp.g, factor(a)))) 
                 for a in factors(bp.g))
