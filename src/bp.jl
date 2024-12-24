@@ -328,6 +328,11 @@ end
     abstract type Callback
 
 Subtypes can be used as callbacks during the iterations.
+The signature is 
+```
+callback(bp, errv, errf, errb, it) -> false
+```
+Returning `true` stops the iterations.
 """
 abstract type Callback end
 
