@@ -39,7 +39,7 @@ Return a specialized BP instance with `KSATClause` and messages encoded as tuple
 ```
 """
 function fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause},
-        ϕ::Vector{<:BPFactor}=fill(UniformFactor(), nvariables(g)))
+        ϕ::Vector{<:BPFactor}=[BPFactor(ones(2)) for _ in 1:nvariables(g)])
     T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
     all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
     all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
