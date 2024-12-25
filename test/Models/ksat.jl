@@ -72,7 +72,7 @@ end
     iterate_ms!(bp)
     b_ms = argmax.(beliefs_ms(bp))
     reset!(bp)
-    cb = Decimation(n, 1e-8)
+    cb = Decimation(bp, 1e-8)
     iterate!(bp; callbacks = [cb])
     b_dec = argmax.(beliefs_ms(bp))
     @test b_ms == b_dec

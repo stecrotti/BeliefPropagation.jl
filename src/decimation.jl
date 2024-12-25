@@ -9,6 +9,7 @@ function Decimation(n::Integer, tol::TF1, conv_checker::TC=MessageConvergence();
     decimated = falses(n)
     return Decimation{typeof(decimated), TF1, TC, TF2}(decimated, tol, conv_checker, softinf)
 end
+Decimation(bp::BP, args...; kw...) = Decimation(nvariables(bp.g), args...; kw...)
 
 function _find_most_biased(bp::BP, decimated)
     b = beliefs(bp)
