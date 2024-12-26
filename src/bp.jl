@@ -406,7 +406,7 @@ function iterate!(bp::BP;
             callback(bp, errv, errf, errb, it) && return it
         end
     end
-    return nothing
+    return maxiter
 end
 
 function damp!(x::Real, xnew::Real, damp::Real)
