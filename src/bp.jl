@@ -343,22 +343,26 @@ Fields
 - `tol`: the tolerance below which BP is considered at a fixed point
 - `conv_checker`: a [`ConvergenceChecker`](@ref) 
 """
-struct ProgressAndConvergence{TP<:Progress, TF<:Real, TC<:ConvergenceChecker} <: Callback
+mutable struct ProgressAndConvergence{TP<:Progress, TF<:Real, TC<:ConvergenceChecker, TI<:Integer} <: Callback
     prog         :: TP
     tol          :: TF
     conv_checker :: TC
+    iters        :: TI
+    converged    :: Bool
 end
 function ProgressAndConvergence(maxiter::Integer, tol::Real, 
         conv_checker::ConvergenceChecker=MessageConvergence())
     prog = Progress(maxiter; desc="Running BP", dt=2)
-    return ProgressAndConvergence(prog, tol, conv_checker)
+    return ProgressAndConvergence(prog, tol, conv_checker, 0, false)
 end
 
 function (cb::ProgressAndConvergence)(bp, errv, errf, errb, it)
-    ε = cb.conv_checker(bp, errv, errf, errb, it)
+    ε = cb.conv_checker(bp, errv, errf, errb, it) |> value
     next!(cb.prog, showvalues=[(:it, "$it/$(cb.prog.n)"), (:ε, "$ε/$(cb.tol)")])
-    has_converged = ε < cb.tol
-    return has_converged
+    cb.iters = it
+    converged = ε < cb.tol
+    cb.converged = converged
+    return converged
 end
 
 
@@ -402,7 +406,7 @@ function iterate!(bp::BP;
             callback(bp, errv, errf, errb, it) && return it
         end
     end
-    return maxiter
+    return nothing
 end
 
 function damp!(x::Real, xnew::Real, damp::Real)
