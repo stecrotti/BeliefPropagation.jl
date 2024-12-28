@@ -334,7 +334,8 @@ abstract type Callback end
 """
     ProgressAndConvergence <: Callback
 
-A basic callback that prints a progress bar and checks convergence.
+A basic callback that prints a progress bar and checks convergence.ù
+The recommended constructor is `ProgressAndConvergence(maxiter::Integer, tol::Real)`.
 
 Fields
 ========
@@ -350,6 +351,23 @@ mutable struct ProgressAndConvergence{TP<:Progress, TF<:Real, TC<:ConvergenceChe
     iters        :: TI
     converged    :: Bool
 end
+
+"""
+    ProgressAndConvergence(maxiter, tol)
+
+Return an instance of the [`ProgressAndConvergence`](@ref) callback.
+
+Arguments
+========
+
+- `maxiter`: maximum number of iterations
+- `tol`: tolerance for convergence check
+
+Optional arguments
+========
+
+- `conv_checker`: a [`ConvergenceChecker`](@ref)
+"""
 function ProgressAndConvergence(maxiter::Integer, tol::Real, 
         conv_checker::ConvergenceChecker=MessageConvergence())
     prog = Progress(maxiter; desc="Running BP", dt=2)
