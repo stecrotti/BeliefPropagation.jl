@@ -429,12 +429,19 @@ end
 function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     (; h, b) = bp
     zᵢ = sum(bnew[i])
-    bnew[i] ./= zᵢ
+    # there can be cases where bnew[i] is all zeros -> do not normalize
+    if zᵢ != 0
+        bnew[i] ./= zᵢ
+    end
     errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
-    for ia in ei
-        hnew[ia] ./= sum(hnew[ia])
+    for ia in ei        
+        zᵢ₂ₐ = sum(hnew[ia])
+        # there can be cases where hnew[i] is all zeros -> do not normalize
+        if zᵢ != 0
+            hnew[ia] ./= zᵢ₂ₐ
+        end
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
@@ -456,7 +463,11 @@ function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
     err = zero(eltype(bp))
     for ai in ea
-        unew[ai] ./= sum(unew[ai])
+        zₐ₂ᵢ = sum(unew[ai])
+        # there can be cases where unew[i] is all zeros -> do not normalize
+        if zₐ₂ᵢ != 0
+            unew[ai] ./= zₐ₂ᵢ
+        end
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end

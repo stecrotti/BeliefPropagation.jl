@@ -66,3 +66,25 @@ end
     @test z ≈ z_ex
     test_za(bp)
 end
+
+@testset "Decimation" begin
+    rng = MersenneTwister(0)
+    N = 8
+    t = prufer_decode(rand(rng, 1:N, N-2))
+    g = pairwise_interaction_graph(IndexedGraph(t))
+    k = 3   # number of colors
+    states = fill(k, nv(t))
+    ψ = fill(ColoringCoupling(), ne(t))
+    ϕ = vcat([BPFactor([1.0, 0, 0])],
+        [BPFactor([0, 1.0, 0])],
+        [rand_factor(k) for _ in 3:N]
+    )
+    bp = BP(g, ψ, states; ϕ)
+    iterate_ms!(bp)
+    b_ms = argmax.(beliefs_ms(bp))
+    reset!(bp)
+    cb = Decimation(bp, 1e-8)
+    iterate!(bp; callbacks = [cb])
+    b_dec = argmax.(beliefs_ms(bp))
+    @test b_ms == b_dec
+end
