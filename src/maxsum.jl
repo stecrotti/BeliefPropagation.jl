@@ -12,7 +12,8 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real;
         extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i))
-    logϕᵢ = [log(ϕ[i](x)) + b[i][x]*rein for x in 1:nstates(bp, i)]
+    logϕᵢ = [log(ϕ[i](x)) + (rein > 0 ? b[i][x]*rein : 0)
+         for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
     bnew[i] = @views cavity!(hnew[ei], u[ei], msg_sum, logϕᵢ)
     logzᵢ = maximum(bnew[i])
@@ -38,14 +39,11 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real;
     for ai in ea
         unew[ai] .= typemin(eltype(bp))
     end
-    # logzₐ = typemin(eltype(bp))
     for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
         for (i, ai) in pairs(ea)
             unew[ai][xₐ[i]] = max(unew[ai][xₐ[i]], log(ψₐ(xₐ)) + 
                 sum(h[ja][xₐ[j]] for (j, ja) in pairs(ea) if j != i; init=0.0))
         end
-        # logzₐ = max(logzₐ, 
-        #     log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=0.0))
     end
     err = typemin(eltype(bp))
     for ai in ea
