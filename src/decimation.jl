@@ -1,13 +1,45 @@
-struct Decimation{TB<:AbstractVector{<:Bool}, TF1<:Real, TC<:ConvergenceChecker, TF2<:Real} <: Callback
+"""
+    Decimation <: Callback
+
+A callback that implements the decimation procedure: whenever the desired convergence
+tolerance has been reached, the variable with the most biased belief is fixed to that value
+by modifying the corresponding ϕ factor. The procedure is repeated until all variables are fixed.
+The recommended constructor is `Decimation(n::Integer, tol::Real)`.
+"""
+mutable struct Decimation{TP<:Progress, TB<:AbstractVector{<:Bool}, TF1<:Real, 
+        TC<:ConvergenceChecker, TF2<:Real, TI<:Integer} <: Callback
+    prog         :: TP
     decimated    :: TB
     tol          :: TF1
     conv_checker :: TC
     softinf      :: TF2
+    iters        :: TI
+    converged    :: Bool
 end
-function Decimation(n::Integer, tol::TF1, conv_checker::TC=MessageConvergence();
-        softinf::TF2 = 1e8) where {TF1<:Real, TC<:ConvergenceChecker, TF2<:Real}
+
+"""
+    Decimation(n, maxiter, tol)
+
+Return an instance of the [`Decimation`](@ref) callback.
+
+Arguments
+========
+
+- `n`: total number of variables
+- `maxiter`: maximum number of iterations
+- `tol`: tolerance for convergence check
+
+Optional arguments
+========
+
+- `conv_checker`: a [`ConvergenceChecker`](@ref)
+- `softinf`: the real value used to fix variables
+"""
+function Decimation(n::Integer, maxiter::Integer, tol::Real, conv_checker=MessageConvergence();
+        softinf::Real=1e8)
+    prog = Progress(maxiter; desc="Running BP + decimation", dt=2)
     decimated = falses(n)
-    return Decimation{typeof(decimated), TF1, TC, TF2}(decimated, tol, conv_checker, softinf)
+    return Decimation(prog, decimated, tol, conv_checker, softinf, 0, false)
 end
 Decimation(bp::BP, args...; kw...) = Decimation(nvariables(bp.g), args...; kw...)
 
