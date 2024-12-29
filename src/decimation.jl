@@ -49,7 +49,7 @@ function _find_most_biased(bp::BP, decimated)
     for j in eachindex(b)
         if !decimated[j]
             mx = maximum(b[j])
-            if mx > m
+            if mx ≥ m
                 m = mx
                 i = j
             end
