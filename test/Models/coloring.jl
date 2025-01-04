@@ -70,7 +70,6 @@ end
 @testset "Decimation" begin
     rng = MersenneTwister(0)
     N = 8
-    # t = prufer_decode(rand(rng, 1:N, N-2))
     A = sparse([2, 4, 7, 1, 6, 1, 5, 4, 6, 8, 3, 5, 1, 5], [1, 1, 1, 2, 3, 4, 4, 5, 5, 5, 6, 6, 7, 8], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 8, 8)
     g = pairwise_interaction_graph(IndexedGraph(A))
     k = 3   # number of colors
