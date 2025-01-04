@@ -70,15 +70,22 @@ end
 @testset "Decimation" begin
     rng = MersenneTwister(0)
     N = 8
-    t = prufer_decode(rand(rng, 1:N, N-2))
-    g = pairwise_interaction_graph(IndexedGraph(t))
+    # t = prufer_decode(rand(rng, 1:N, N-2))
+    A = sparse([2, 4, 7, 1, 6, 1, 5, 4, 6, 8, 3, 5, 1, 5], [1, 1, 1, 2, 3, 4, 4, 5, 5, 5, 6, 6, 7, 8], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 8, 8)
+    g = pairwise_interaction_graph(IndexedGraph(A))
     k = 3   # number of colors
     states = fill(k, nv(t))
     ψ = fill(ColoringCoupling(), ne(t))
-    ϕ = vcat([BPFactor([1.0, 0, 0])],
-        [BPFactor([0, 1.0, 0])],
-        [rand_factor(k) for _ in 3:N]
-    )
+    ϕ = [
+        TabulatedBPFactor([1.0, 0.0, 0.0]),
+        TabulatedBPFactor([0.0, 1.0, 0.0]),
+        TabulatedBPFactor([0.8576486278354781, 0.933376113472654, 0.9887502004400418]),
+        TabulatedBPFactor([0.28765908697080933, 0.22925096087844, 0.6898492319049271]),
+        TabulatedBPFactor([0.9346852188449652, 0.667819817743093, 0.8451887825155666]),
+        TabulatedBPFactor([0.19522313463573093, 0.5485804533857773, 0.9148128306625107]),
+        TabulatedBPFactor([0.2564514957015539, 0.07406713024633105, 0.13299843191690675]),
+        TabulatedBPFactor([0.6550227672869462, 0.10474144135869445, 0.35157484078739665])
+    ]
     bp = BP(g, ψ, states; ϕ)
     iterate_ms!(bp)
     b_ms = argmax.(beliefs_ms(bp))
