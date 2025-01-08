@@ -22,6 +22,7 @@ include("Test/Test.jl")
 export BPFactor, TabulatedBPFactor, UniformFactor
 export BP, reset!, randomize!, nstates, evaluate, energy, energy_factors, energy_variables
 export iterate!, beliefs, factor_beliefs, avg_energy, bethe_free_energy
+export Callback
 export MessageConvergence, BeliefConvergence, ProgressAndConvergence
 export update_f_bp!, update_v_bp!, beliefs_bp, factor_beliefs_bp, avg_energy_bp
 export update_f_ms!, update_v_ms!, beliefs_ms, factor_beliefs_ms, iterate_ms!,
