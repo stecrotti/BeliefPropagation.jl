@@ -90,7 +90,7 @@ function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew,
         if zᵢ != 0
             hnew[ia] = hnew[ia] ./ zᵢ₂ₐ
         end
-        errv = max(errv, maximum(abs, hnew[ia] .- h[ia]))
+        errv = max(errv, abs(h[ia][1] - hnew[ia][1]))
         h[ia] = damp!(h[ia], hnew[ia], damp)
     end
     return errv, errb
@@ -111,7 +111,7 @@ function BeliefPropagation.set_messages_factor!(bp::BPKSAT, ea, unew, damp)
     err = zero(eltype(bp))
     for ai in ea
         unew[ai] = unew[ai] ./ sum(unew[ai])
-        err = max(err, maximum(abs, unew[ai] .- u[ai]))
+        err = max(err, abs(unew[ai][1] - u[ai][1]))
         u[ai] = damp!(u[ai], unew[ai], damp)
     end
     return err
