@@ -100,7 +100,7 @@ function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp
         extra_kwargs...)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
-    ϕᵢ = ntuple(x -> ϕ[i](x) * b[i][x]^rein, nstates(bp, i))
+    ϕᵢ = (ϕ[i](1) * b[i][1]^rein, ϕ[i](2) * b[i][2]^rein)
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
@@ -109,7 +109,7 @@ end
 function BeliefPropagation.set_messages_factor!(bp::BPKSAT, ea, unew, damp)
     u = bp.u
     err = zero(eltype(bp))
-    for ai in ea
+    @inbounds for ai in ea
         unew[ai] = unew[ai] ./ sum(unew[ai])
         err = max(err, abs(unew[ai][1] - u[ai][1]))
         u[ai] = damp!(u[ai], unew[ai], damp)
@@ -123,16 +123,16 @@ function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].J
     htemp = one(eltype(bp))
-    for (α, ia) in enumerate(ea)
+    @inbounds for (Jα, ia) in zip(Jₐ, ea)
         unew[ia] = (htemp, htemp)
-        htemp *= h[ia][Jₐ[α]+1]
+        htemp *= h[ia][Jα+1]
     end
     htemp = one(eltype(bp))
-    for (α, ia) in Iterators.reverse(enumerate(ea))
+    @inbounds for (α, ia) in Iterators.reverse(enumerate(ea))
         unew[ia] = unew[ia] .* (htemp, htemp)
         htemp *= h[ia][Jₐ[α]+1]
     end
-    for (α, ia) in enumerate(ea)
+    @inbounds for (α, ia) in enumerate(ea)
         prodh = unew[ia][1]
         u0 = (1 - prodh*(1-Jₐ[α])) / (2-prodh)
         u1 = (1 - prodh*Jₐ[α]) / (2-prodh)
