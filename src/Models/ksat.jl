@@ -81,10 +81,10 @@ function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew,
     if zᵢ != 0
         bnew[i] = bnew[i] ./ zᵢ
     end
-    errb = maximum(abs, bnew[i] .- b[i])
+    errb = abs(bnew[i][1] - b[i][1])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
-    for ia in ei
+    @inbounds for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
         # there can be cases where hnew[i] is all zeros -> do not normalize
         if zᵢ != 0
@@ -128,9 +128,9 @@ function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real
         htemp *= h[ia][Jα+1]
     end
     htemp = one(eltype(bp))
-    @inbounds for (α, ia) in Iterators.reverse(enumerate(ea))
+    @inbounds for (Jα, ia) in Iterators.reverse(zip(Jₐ, ea))
         unew[ia] = unew[ia] .* (htemp, htemp)
-        htemp *= h[ia][Jₐ[α]+1]
+        htemp *= h[ia][Jα+1]
     end
     @inbounds for (α, ia) in enumerate(ea)
         prodh = unew[ia][1]
