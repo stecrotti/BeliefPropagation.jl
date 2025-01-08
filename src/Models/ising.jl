@@ -123,7 +123,7 @@ function BeliefPropagation.update_v_bp!(bp::BPIsing,
     errv = -Inf
     for ia in ei
         errv = max(errv, abs(hnew[ia] - h[ia]))
-        h[ia] = damp!(h[ia], hnew[ia], damp)
+        h[ia] = damping(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
@@ -138,7 +138,7 @@ function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
-        u[ai] = damp!(u[ai], unew[ai], damp)
+        u[ai] = damping(u[ai], unew[ai], damp)
     end
     return err
 end
@@ -194,7 +194,7 @@ function BeliefPropagation.update_v_ms!(bp::BPIsing,
     errv = -Inf
     for ia in ei
         errv = max(errv, abs(hnew[ia] - h[ia]))
-        h[ia] = damp!(h[ia], hnew[ia], damp)
+        h[ia] = damping(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
@@ -210,7 +210,7 @@ function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
     err = -Inf
     for ai in ea
         err = max(err, abs(unew[ai] - u[ai]))
-        u[ai] = damp!(u[ai], unew[ai], damp)
+        u[ai] = damping(u[ai], unew[ai], damp)
     end
     return err
 end

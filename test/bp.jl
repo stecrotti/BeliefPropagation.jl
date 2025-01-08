@@ -21,6 +21,9 @@ end
     ψ = [ψ₁, ψ₂, ψ₃]
     bp = BP(g, ψ, states)
     randomize!(bp)
+    bp_cp = deepcopy(bp)
+    iterate!(bp; maxiter=10, damp=1, tol=0)
+    @test bp_cp.u == bp.u && bp_cp.h == bp.h
     iterate!(bp; maxiter=6, tol=1e-12)
     f_bethe = bethe_free_energy(bp)
     f_bethe_beliefs = BeliefPropagation.bethe_free_energy_bp_beliefs(bp)

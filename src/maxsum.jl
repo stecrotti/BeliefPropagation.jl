@@ -25,7 +25,7 @@ function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real;
         logzᵢ₂ₐ = maximum(hnew[ia])
         hnew[ia] .-= logzᵢ₂ₐ
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
-        h[ia] = damp!(h[ia], hnew[ia], damp)
+        h[ia] = damping(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
@@ -50,7 +50,7 @@ function update_f_ms!(bp::BP, a::Integer, unew, damp::Real;
         logzₐ₂ᵢ = maximum(unew[ai])
         unew[ai] .-= logzₐ₂ᵢ
         err = max(err, maximum(abs, unew[ai] - u[ai]))
-        u[ai] = damp!(u[ai], unew[ai], damp)
+        u[ai] = damping(u[ai], unew[ai], damp)
     end
     return err
 end

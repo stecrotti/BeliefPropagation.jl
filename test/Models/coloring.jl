@@ -18,7 +18,7 @@ end
     ψ = fill(ColoringCoupling(), ne(t))
     ϕ = [rand_factor(k) for _ in vertices(t)]
     bp = BP(g, ψ, states; ϕ)
-    iterate!(bp; maxiter=20, tol=0, damp=0.9)
+    iterate!(bp; maxiter=20, tol=0)
     b = beliefs(bp)
     b_ex = exact_marginals(bp)
     @test b ≈ b_ex
@@ -48,7 +48,7 @@ end
     ψ = fill(SoftColoringCoupling(β), ne(t))
     ϕ = [rand_factor(k) for _ in vertices(t)]
     bp = BP(g, ψ, states; ϕ)
-    iterate!(bp; maxiter=20, tol=0, damp=0.9)
+    iterate!(bp; maxiter=20, tol=0)
     b = beliefs(bp)
     b_ex = exact_marginals(bp)
     @test b ≈ b_ex
