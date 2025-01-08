@@ -440,8 +440,7 @@ function damp!(x::T, xnew::T, damp::Real) where {T<:Union{<:AbstractVector,<:Tup
             xinew = xinew * (1-damp) + xi * damp
         end
     end
-    x, xnew = xnew, x
-    return x
+    return xnew
 end
 
 function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
