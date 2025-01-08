@@ -427,18 +427,24 @@ function iterate!(bp::BP;
     return maxiter
 end
 
-function damp!(x::Real, xnew::Real, damp::Real)
+function damping(x::Real, xnew::Real, damp::Real)
     0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
     damp == 0 && return xnew
     return xnew * (1-damp) + x * damp
 end
 
-function damp!(x::T, xnew::T, damp::Real) where {T<:Union{<:AbstractVector,<:Tuple}}
+function damping(x::T, xnew::T, damp::Real) where {T<:AbstractVector{<:Real}}
     0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
     if damp != 0
-        for (xi, xinew) in zip(x, xnew)
-            xinew = xinew * (1-damp) + xi * damp
-        end
+        xnew = xnew * (1-damp) + x * damp
+    end
+    return xnew
+end
+
+function damping(x::T, xnew::T, damp::Real) where {T<:Tuple}
+    0 ≤ damp ≤ 1 || throw(ArgumentError("Damping factor must be in [0,1], got $damp"))
+    if damp != 0
+        xnew = xnew .* (1-damp) .+ x .* damp
     end
     return xnew
 end
@@ -460,7 +466,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
             hnew[ia] ./= zᵢ₂ₐ
         end
         errv = max(errv, maximum(abs, hnew[ia] - h[ia]))
-        h[ia] = damp!(h[ia], hnew[ia], damp)
+        h[ia] = damping(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
@@ -486,7 +492,7 @@ function set_messages_factor!(bp, ea, unew, damp)
             unew[ai] ./= zₐ₂ᵢ
         end
         err = max(err, maximum(abs, unew[ai] - u[ai]))
-        u[ai] = damp!(u[ai], unew[ai], damp)
+        u[ai] = damping(u[ai], unew[ai], damp)
     end
     return err
 end
