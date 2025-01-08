@@ -376,7 +376,7 @@ end
 
 function (cb::ProgressAndConvergence)(bp, errv, errf, errb, it)
     ε = cb.conv_checker(bp, errv, errf, errb, it) |> value
-    next!(cb.prog, showvalues=[(:it, "$it/$(cb.prog.n)"), (:ε, "$ε/$(cb.tol)")])
+    next!(cb.prog, showvalues=[(:it, :($it/$(cb.prog.n))), (:ε, :($ε/$(cb.tol)))])
     cb.iters = it
     converged = ε < cb.tol
     cb.converged = converged
