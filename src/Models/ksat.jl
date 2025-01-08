@@ -29,13 +29,13 @@ function BeliefPropagation.compute_za(bp::BP{<:KSATClause}, a::Integer,
     return z1 - z2
 end
 
-const BPKSAT = BP{<:KSATClause, <:BPFactor, <:NTuple{2,<:Real}, <:NTuple{2,<:Real}}
+const BPKSAT = BP{<:KSATClause, <:BPFactor, <:Real, <:Real}
 
 
 @doc raw"""
     fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause}, [ϕ])
 
-Return a specialized BP instance with `KSATClause` and messages encoded as tuples of two reals instead of vectors. 
+Return a specialized BP instance with `KSATClause` and messages encoded as reals instead of vectors. 
 ```
 """
 function fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause},
@@ -43,33 +43,33 @@ function fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause},
     T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
     all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
     all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
-    u = fill((T(0.5), T(0.5)), ne(g))
-    h = fill((T(0.5), T(0.5)), ne(g))
-    b = fill((T(0.5), T(0.5)), nvariables(g))
+    init = T(0.5)
+    u = fill(init, ne(g))
+    h = fill(init, ne(g))
+    b = fill(init, nvariables(g))
     return BP(g, ψ, ϕ, u, h, b)
 end
 
 BeliefPropagation.nstates(bp::BPKSAT, ::Integer) = 2
 
-Base.eltype(bp::BPKSAT) = eltype(eltype(eltype(bp.b)))
+Base.eltype(bp::BPKSAT) = eltype(eltype(bp.b))
 
 function BeliefPropagation.reset!(bp::BPKSAT)
     (; u, h, b) = bp
     T = eltype(bp)
-    u .= ((T(0.5), T(0.5)),)
-    h .= ((T(0.5), T(0.5)),)
-    b .= ((T(0.5), T(0.5)),)
+    init = T(0.5)
+    u .= init
+    h .= init
+    b .= init
     return nothing
 end
 function BeliefPropagation.randomize!(rng::AbstractRNG, bp::BPKSAT)
     (; u, h, b) = bp
     T = eltype(bp)
-    for ia in eachindex(u)
-        ru = rand(rng, T); rh = rand(rng, T)
-        u[ia] = (ru, 1-ru)
-        h[ia] = (rh, 1-rh)
-    end
-    b .= ((T(0.5), T(0.5)),)
+    rand!(rng, u)
+    rand!(rng, h)
+    rand!(rng, b)
+    b .= T(0.5)
     return nothing
 end
 
@@ -101,7 +101,8 @@ function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = (ϕ[i](1) * b[i][1]^rein, ϕ[i](2) * b[i][2]^rein)
-    bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
+    f(aggr, new) = aggr * (1/new - 1)
+    bnew[i] = @views cavity!(hnew[ei], u[ei], f, one(eltype(bp)))
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
 end
