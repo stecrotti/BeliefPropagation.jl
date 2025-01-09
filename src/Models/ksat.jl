@@ -65,87 +65,85 @@ function BeliefPropagation.reset!(bp::BPKSAT)
 end
 function BeliefPropagation.randomize!(rng::AbstractRNG, bp::BPKSAT)
     (; u, h, b) = bp
-    T = eltype(bp)
     rand!(rng, u)
     rand!(rng, h)
-    rand!(rng, b)
-    b .= T(0.5)
+    b .= 0
     return nothing
 end
 
-function BeliefPropagation.set_messages_variable!(bp::BPKSAT, ei, i, hnew, bnew, damp)
-    (; h, b) = bp
-    T = eltype(bp)
-    zᵢ = sum(bnew[i])
-    # there can be cases where bnew[i] is all zeros -> do not normalize
-    if zᵢ != 0
-        bnew[i] = bnew[i] ./ zᵢ
-    end
-    errb = abs(bnew[i][1] - b[i][1])
+function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp::Real, rein::Real;
+        extra_kwargs...)
+    (; g, ϕ, u, h, b) = bp
+    ei = edge_indices(g, variable(i)) 
+    ϕᵢ = (ϕ[i](1) * (1-b[i])^rein) / (ϕ[i](2) * b[i]^rein)
+    u_ = (1/x-1 for x in u[ei])
+    bnew[i] = @views cavity!(hnew[ei], u_, *, one(eltype(bp)))
+    f(x) = 1 / (1 + ϕᵢ*x)
+    bnew[i] = f(bnew[i])
+    errb = abs(bnew[i] - b[i])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
     @inbounds for ia in ei
-        zᵢ₂ₐ = sum(hnew[ia])
-        # there can be cases where hnew[i] is all zeros -> do not normalize
-        if zᵢ != 0
-            hnew[ia] = hnew[ia] ./ zᵢ₂ₐ
-        end
-        errv = max(errv, abs(h[ia][1] - hnew[ia][1]))
+        hnew[ia] = f(hnew[ia])
+        errv = max(errv, abs(hnew[ia] - h[ia]))
         h[ia] = damping(h[ia], hnew[ia], damp)
     end
     return errv, errb
 end
 
-function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp::Real, rein::Real;
-        extra_kwargs...)
-    (; g, ϕ, u, b) = bp
-    ei = edge_indices(g, variable(i)) 
-    ϕᵢ = (ϕ[i](1) * b[i][1]^rein, ϕ[i](2) * b[i][2]^rein)
-    f(aggr, new) = aggr * (1/new - 1)
-    bnew[i] = @views cavity!(hnew[ei], u[ei], f, one(eltype(bp)))
-    errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp)
-    return errv, errb
-end
-
-function BeliefPropagation.set_messages_factor!(bp::BPKSAT, ea, unew, damp)
-    u = bp.u
-    err = zero(eltype(bp))
-    @inbounds for ai in ea
-        unew[ai] = unew[ai] ./ sum(unew[ai])
-        err = max(err, abs(unew[ai][1] - u[ai][1]))
-        u[ai] = damping(u[ai], unew[ai], damp)
-    end
-    return err
-end
-
 function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real;
         extra_kwargs...)
-    (; g, ψ, h) = bp
+    (; g, ψ, u, h) = bp
     ea = edge_indices(g, factor(a))
     Jₐ = ψ[a].J
-    htemp = one(eltype(bp))
-    @inbounds for (Jα, ia) in zip(Jₐ, ea)
-        unew[ia] = (htemp, htemp)
-        htemp *= h[ia][Jα+1]
+    h_ = (Jₐⁱ ? h[ia] : 1-h[ia] for (ia, Jₐⁱ) in zip(ea, Jₐ))
+    @views cavity!(unew[ea], h_, *, one(eltype(bp)))
+    errf = zero(eltype(bp))
+    @inbounds for (ai, Jₐⁱ) in zip(ea, Jₐ)
+        unew[ai] = (1 - Jₐⁱ * unew[ai]) / (2 - unew[ai])
+        errf = max(errf, abs(unew[ai] - u[ai]))
+        u[ai] = damping(u[ai], unew[ai], damp)
     end
-    htemp = one(eltype(bp))
-    @inbounds for (Jα, ia) in Iterators.reverse(zip(Jₐ, ea))
-        unew[ia] = unew[ia] .* (htemp, htemp)
-        htemp *= h[ia][Jα+1]
-    end
-    @inbounds for (α, ia) in enumerate(ea)
-        prodh = unew[ia][1]
-        u0 = (1 - prodh*(1-Jₐ[α])) / (2-prodh)
-        u1 = (1 - prodh*Jₐ[α]) / (2-prodh)
-        unew[ia] = (u0, u1)   
-    end
-
-    err = set_messages_factor!(bp, ea, unew, damp)
-    return err
+    return errf
 end
 
 function BeliefPropagation.beliefs_bp(bp::BPKSAT)
     return map(bp.b) do bᵢ
-        collect(bᵢ)
+        [1-bᵢ, bᵢ]
     end
+end
+
+function BeliefPropagation.factor_beliefs_bp(bp::BPKSAT)
+    (; g, ψ, h) = bp
+    return map(factors(g)) do a
+        ψₐ = ψ[a]
+        ∂a = neighbors(g, factor(a))
+        bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
+            ψₐ(xₐ) * prod(xₐ[i] == 2 ? h[ia] : 1-h[ia] 
+                for (i, ia) in pairs(edge_indices(g, factor(a))); init=one(eltype(bp)))
+        end
+        zₐ = sum(bₐ)
+        bₐ ./= zₐ
+        bₐ
+    end
+end
+
+function BeliefPropagation.compute_zi(bp::BPKSAT, i::Integer, 
+        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, variable(i))])
+    zi0 = bp.ϕ[i](1) * prod(msg_in, init=one(eltype(bp)))
+    zi1 = bp.ϕ[i](2) * prod((1 - u for u in msg_in), init=one(eltype(bp)))
+    return zi0 + zi1
+end
+
+function BeliefPropagation.compute_za(bp::BPKSAT, a::Integer, 
+        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, factor(a))])
+    (; g, ψ, h) = bp
+    ea = edge_indices(g, factor(a))
+    Jₐ = ψ[a].J
+    h_ = (Jₐⁱ ? h[ia] : 1-h[ia] for (ia, Jₐⁱ) in zip(ea, Jₐ))
+    return 1 - prod(h_, init=one(eltype(bp)))
+end
+
+function BeliefPropagation.compute_zai(bp::BPKSAT, ai::Integer, uai::Real, hia::Real)
+    return uai * hia + (1-uai) * (1-hia)
 end

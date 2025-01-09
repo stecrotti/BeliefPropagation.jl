@@ -10,7 +10,7 @@ using BeliefPropagation
 using CavityTools: cavity, cavity!
 using IndexedGraphs: IndexedGraphs, IndexedGraph, ne, neighbors, nv
 using LinearAlgebra: Symmetric
-using Random: AbstractRNG
+using Random: AbstractRNG, rand!
 
 include("ising.jl")
 include("ksat.jl")
