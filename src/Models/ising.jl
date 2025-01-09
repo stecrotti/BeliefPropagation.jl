@@ -111,6 +111,13 @@ function BeliefPropagation.reset!(bp::BPIsing)
     b .= 0
     return nothing
 end
+function BeliefPropagation.randomize!(rng::AbstractRNG, bp::BPIsing)
+    (; u, h, b) = bp
+    rand!(rng, u)
+    rand!(rng, h)
+    b .= 0
+    return nothing
+end
 
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real; extra_kwargs...)

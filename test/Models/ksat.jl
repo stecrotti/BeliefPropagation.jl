@@ -40,10 +40,10 @@ end
     ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
     bp = fast_ksat_bp(g, ψ)
     reset!(bp)
-    randomize!(bp)
     bp_cp = deepcopy(bp)
     iterate!(bp; maxiter=10, damp=1, tol=0)
     @test bp_cp.u == bp.u && bp_cp.h == bp.h
+    randomize!(bp)
     iterate!(bp; maxiter=50, tol=1e-10)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
