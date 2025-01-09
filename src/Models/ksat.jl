@@ -76,7 +76,7 @@ function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp
     (; g, ϕ, u, h, b) = bp
     ei = edge_indices(g, variable(i)) 
     ϕᵢ = (ϕ[i](1) * (1-b[i])^rein) / (ϕ[i](2) * b[i]^rein)
-    u_ = (1/x-1 for x in u[ei])
+    u_ = (1/x-1 for x in @view u[ei])
     bnew[i] = @views cavity!(hnew[ei], u_, *, one(eltype(bp)))
     f(x) = 1 / (1 + ϕᵢ*x)
     bnew[i] = f(bnew[i])
