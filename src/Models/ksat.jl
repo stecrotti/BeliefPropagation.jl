@@ -35,7 +35,7 @@ const BPKSAT = BP{<:KSATClause, <:BPFactor, <:Real, <:Real}
 @doc raw"""
     fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause}, [ϕ])
 
-Return a specialized BP instance with `KSATClause` and messages encoded as reals instead of vectors. 
+Return a specialized BP instance with `KSATClause` and messages encoded as reals instead of vectors: only the probability of x=1 is stored. 
 ```
 """
 function fast_ksat_bp(g::AbstractFactorGraph, ψ::Vector{<:KSATClause},
