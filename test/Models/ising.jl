@@ -75,6 +75,7 @@ end
     β = rand(rng)
     ising = Ising(g, J, h, β)
     bp = fast_ising_bp(ising)
+    randomize!(bp)
     iterate!(bp; maxiter=50, tol=1e-10, damp=0.1)
     b = beliefs(bp)
     fb = factor_beliefs(bp)
