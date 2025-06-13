@@ -5,12 +5,6 @@
 [![Coverage](https://codecov.io/gh/stecrotti/BeliefPropagation.jl/graph/badge.svg?token=KjSnA3UPCt)](https://codecov.io/gh/stecrotti/BeliefPropagation.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
--------------------
-
-⚠️ This package is heavily work in progress, some breaking changes should be expected.
-
--------------------
-
 This package implements a generic version of the [Belief Propagation](https://en.wikipedia.org/wiki/Belief_propagation) (BP) algorithm for the approximation of probability distributions factorized on a graph
 ```math
 \begin{equation}
