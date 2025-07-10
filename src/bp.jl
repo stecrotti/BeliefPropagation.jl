@@ -59,7 +59,7 @@ function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
     all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
     u = [fill(one(T)/states[dst(e)], states[dst(e)]) for e in edges(g)]
     h = [fill(one(T)/states[dst(e)], states[dst(e)]) for e in edges(g)]
-    b = [fill(one(T)/states[i], states[i]) for i in variables(g)]
+    b = [fill(one(T)/states[i], states[i]) for i in eachvariable(g)]
     return BP(g, ψ, ϕ, u, h, b)
 end
 
@@ -151,9 +151,9 @@ beliefs(bp::BP) = beliefs(beliefs_bp, bp)
 
 function factor_beliefs_bp(bp::BP)
     (; g, ψ, h) = bp
-    return map(factors(g)) do a
-        ∂a = neighbors(g, factor(a))
-        ea = edge_indices(g, factor(a))
+    return map(eachfactor(g)) do a
+        ∂a = neighbors(g, f_vertex(a))
+        ea = edge_indices(g, f_vertex(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(h[ia][xₐ[i]...] for (i, ia) in pairs(ea); init=one(eltype(bp)))
@@ -168,14 +168,14 @@ factor_beliefs(bp::BP) = factor_beliefs(factor_beliefs_bp, bp)
 function avg_energy_bp(bp::BP; fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
     eₐ = eᵢ = 0.0
-    for a in factors(g)
-        ∂a = neighbors(g, factor(a))
+    for a in eachfactor(g)
+        ∂a = neighbors(g, f_vertex(a))
         for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
             eₐ += -xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
     eₐ *= _free_energy_correction_factors(bp)
-    for i in variables(g)
+    for i in eachvariable(g)
         for xᵢ in eachindex(b[i])
             eₐ += -xlogy(b[i][xᵢ], ϕ[i](xᵢ))
         end
@@ -196,16 +196,16 @@ function bethe_free_energy_bp_beliefs(bp::BP;
         fb = factor_beliefs(bp), b = beliefs(bp))
     (; g, ψ, ϕ) = bp
     fₐ = fᵢ = 0.0
-    for a in factors(g)
-        ∂a = neighbors(g, factor(a))
+    for a in eachfactor(g)
+        ∂a = neighbors(g, f_vertex(a))
         for xₐ in Iterators.product((1:nstates(bp, i) for i in ∂a)...)
             fₐ += xlogx(fb[a][xₐ...]) - xlogy(fb[a][xₐ...], ψ[a](xₐ))
         end
     end
     fₐ *= _free_energy_correction_factors(bp)
 
-    for i in variables(g)
-        dᵢ = degree(g, variable(i))
+    for i in eachvariable(g)
+        dᵢ = degree(g, v_vertex(i))
         for xᵢ in eachindex(b[i])
             fᵢ += (1-dᵢ) * xlogx(b[i][xᵢ]) - xlogy(b[i][xᵢ], ϕ[i](xᵢ))
         end
@@ -215,14 +215,14 @@ end
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
 function compute_zi(bp::BP, i::Integer, 
-        msg_in = bp.u[edge_indices(bp.g, variable(i))])
+        msg_in = bp.u[edge_indices(bp.g, v_vertex(i))])
     init = [bp.ϕ[i](x) for x in 1:nstates(bp, i)]
     bnew = reduce(.*, msg_in; init)
     return sum(bnew)
 end
 
 function compute_za(bp::BP, a::Integer, 
-    msg_in = bp.h[edge_indices(bp.g, factor(a))])
+    msg_in = bp.h[edge_indices(bp.g, f_vertex(a))])
     ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
@@ -241,14 +241,14 @@ function bethe_free_energy_bp(bp::BP)
 
     f_factors = f_variables = f_edges = 0.0
 
-    for a in factors(g)
-        ea = edge_indices(g, factor(a))
+    for a in eachfactor(g)
+        ea = edge_indices(g, f_vertex(a))
         zₐ = compute_za(bp, a, h[ea])
         f_factors += -log(zₐ)
     end
 
-    for i in variables(g)
-        ei = edge_indices(g, variable(i))
+    for i in eachvariable(g)
+        ei = edge_indices(g, v_vertex(i))
         zᵢ = compute_zi(bp, i, u[ei])
         f_variables += -log(zᵢ)
     end
@@ -275,8 +275,8 @@ energy(bp::BP, x) = energy_factors(bp, x) + energy_variables(bp, x)
 function energy_factors(bp::BP, x)
     (; g, ψ) = bp
     w = 0.0
-    for a in factors(g)
-        ∂a = neighbors(g, factor(a))
+    for a in eachfactor(g)
+        ∂a = neighbors(g, f_vertex(a))
         w += -log(ψ[a](x[∂a]))
     end
     return w
@@ -284,7 +284,7 @@ end
 function energy_variables(bp::BP, x)
     (; g, ϕ) = bp
     w = 0.0
-    for i in variables(g)
+    for i in eachvariable(g)
         w += -log(ϕ[i](x[i]))
     end
     return w
@@ -414,10 +414,10 @@ function iterate!(bp::BP;
     errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
     for it in 1:maxiter
-        @threads for a in factors(bp.g)
+        @threads for a in eachfactor(bp.g)
             errf[a] = update_factor!(bp, a, unew, damp; extra_kwargs...)
         end
-        @threads for i in variables(bp.g)
+        @threads for i in eachvariable(bp.g)
             errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; extra_kwargs...)
         end
         for callback in callbacks
@@ -474,7 +474,7 @@ end
 function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real;
         extra_kwargs...)
     (; g, ϕ, u, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, v_vertex(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
     bnew[i] = @views cavity!(hnew[ei], u[ei], .*, ϕᵢ)
     errv, errb = set_messages_variable!(bp, ei, i, hnew, bnew, damp)
@@ -500,7 +500,7 @@ end
 function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real;
         extra_kwargs...)
     (; g, ψ, h) = bp
-    ea = edge_indices(g, factor(a))
+    ea = edge_indices(g, f_vertex(a))
     ψₐ = ψ[a]
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])

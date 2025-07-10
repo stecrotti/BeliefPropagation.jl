@@ -4,9 +4,9 @@
     function free_energy_energy(β)
         rng = MersenneTwister(0)
         g = rand_tree_factor_graph(rng, 30)
-        states = [rand(rng, 2:4) for _ in variables(g)]
-        fₐ = [rand(rng, [states[i] for i in neighbors(g,factor(a))]...) for a in factors(g)]
-        fᵢ = [rand(rng, states[i]) for i in variables(g)] 
+        states = [rand(rng, 2:4) for _ in eachvariable(g)]
+        fₐ = [rand(rng, [states[i] for i in neighbors(g,f_vertex(a))]...) for a in eachfactor(g)]
+        fᵢ = [rand(rng, states[i]) for i in eachvariable(g)] 
         ψ = [BPFactor(f .^ β) for f in fₐ]
         ϕ = [BPFactor(f .^ β) for f in fᵢ]
         bp = BP(g, ψ, states; ϕ)

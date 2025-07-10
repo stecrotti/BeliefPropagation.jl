@@ -21,7 +21,7 @@ function (f::KSATClause)(x)
 end
 
 function BeliefPropagation.compute_za(bp::BP{<:KSATClause}, a::Integer, 
-        msg_in = bp.h[edge_indices(bp.g, factor(a))])
+        msg_in = bp.h[edge_indices(bp.g, f_vertex(a))])
     ψₐ = bp.ψ[a]
     isempty(msg_in) && return one(eltype(ψₐ))
     z1 = prod(sum(hᵢₐ) for (hᵢₐ, Jₐᵢ) in zip(msg_in, ψₐ.J))
@@ -74,7 +74,7 @@ end
 function BeliefPropagation.update_v_bp!(bp::BPKSAT, i::Integer, hnew, bnew, damp::Real, rein::Real;
         extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, v_vertex(i)) 
     ϕᵢ = (ϕ[i](1) * (1-b[i])^rein) / (ϕ[i](2) * b[i]^rein)
     u_ = (1/x-1 for x in @view u[ei])
     bnew[i] = @views cavity!(hnew[ei], u_, *, one(eltype(bp)))
@@ -94,7 +94,7 @@ end
 function BeliefPropagation.update_f_bp!(bp::BPKSAT, a::Integer, unew, damp::Real;
         extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ea = edge_indices(g, factor(a))
+    ea = edge_indices(g, f_vertex(a))
     Jₐ = ψ[a].J
     h_ = (Jₐⁱ ? h[ia] : 1-h[ia] for (ia, Jₐⁱ) in zip(ea, Jₐ))
     @views cavity!(unew[ea], h_, *, one(eltype(bp)))
@@ -115,12 +115,12 @@ end
 
 function BeliefPropagation.factor_beliefs_bp(bp::BPKSAT)
     (; g, ψ, h) = bp
-    return map(factors(g)) do a
+    return map(eachfactor(g)) do a
         ψₐ = ψ[a]
-        ∂a = neighbors(g, factor(a))
+        ∂a = neighbors(g, f_vertex(a))
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(xₐ[i] == 2 ? h[ia] : 1-h[ia] 
-                for (i, ia) in pairs(edge_indices(g, factor(a))); init=one(eltype(bp)))
+                for (i, ia) in pairs(edge_indices(g, f_vertex(a))); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
@@ -129,16 +129,16 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPKSAT)
 end
 
 function BeliefPropagation.compute_zi(bp::BPKSAT, i::Integer, 
-        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, variable(i))])
+        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, v_vertex(i))])
     zi0 = bp.ϕ[i](1) * prod(msg_in, init=one(eltype(bp)))
     zi1 = bp.ϕ[i](2) * prod((1 - u for u in msg_in), init=one(eltype(bp)))
     return zi0 + zi1
 end
 
 function BeliefPropagation.compute_za(bp::BPKSAT, a::Integer, 
-        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, factor(a))])
+        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, f_vertex(a))])
     (; g, ψ, h) = bp
-    ea = edge_indices(g, factor(a))
+    ea = edge_indices(g, f_vertex(a))
     Jₐ = ψ[a].J
     h_ = (Jₐⁱ ? h[ia] : 1-h[ia] for (ia, Jₐⁱ) in zip(ea, Jₐ))
     return 1 - prod(h_, init=one(eltype(bp)))

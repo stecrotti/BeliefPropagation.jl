@@ -11,7 +11,7 @@ end
 function update_v_ms!(bp::BP, i::Integer, hnew, bnew, damp::Real, rein::Real;
         extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ei = edge_indices(g, variable(i))
+    ei = edge_indices(g, v_vertex(i))
     logϕᵢ = [log(ϕ[i](x)) + (rein > 0 ? b[i][x]*rein : 0)
          for x in 1:nstates(bp, i)]
     msg_sum(m1, m2) = m1 .+ m2
@@ -33,8 +33,8 @@ end
 function update_f_ms!(bp::BP, a::Integer, unew, damp::Real;
         extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ∂a = neighbors(g, factor(a))
-    ea = edge_indices(g, factor(a))
+    ∂a = neighbors(g, f_vertex(a))
+    ea = edge_indices(g, f_vertex(a))
     ψₐ = ψ[a]
     for ai in ea
         unew[ai] .= typemin(eltype(bp))
@@ -65,9 +65,9 @@ end
 
 function factor_beliefs_ms(bp::BP)
     (; g, ψ, h) = bp
-    return map(factors(g)) do a
-        ∂a = neighbors(g, factor(a))
-        ea = edge_indices(g, factor(a))
+    return map(eachfactor(g)) do a
+        ∂a = neighbors(g, f_vertex(a))
+        ea = edge_indices(g, f_vertex(a))
         ψₐ = ψ[a]
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
             log(ψₐ(xₐ)) + sum(h[ia][xₐ[i]] for (i, ia) in pairs(ea); init=zero(eltype(bp)))
@@ -81,13 +81,13 @@ end
 function avg_energy_ms(bp::BP; fb = factor_beliefs_ms(bp), b = beliefs_ms(bp))
     (; g, ψ, ϕ) = bp
     eₐ = eᵢ = 0.0
-    for a in factors(g)
+    for a in eachfactor(g)
         bₐ = fb[a]
         xmax = argmax(bₐ) |> Tuple
         eₐ -= log(ψ[a](xmax)) 
     end
     eₐ *= _free_energy_correction_factors(bp)
-    for i in variables(g)
+    for i in eachvariable(g)
         bᵢ = b[i]
         xmax = argmax(bᵢ)
         eᵢ -= log(ϕ[i](xmax))
