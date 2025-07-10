@@ -37,7 +37,7 @@ n = 100
 m = 60
 k = 3
 g = rand_regular_factor_graph(rng, n, m, k)
-ψ = [KSATClause(bitrand(rng, degree(g, factor(a)))) for a in factors(g)]
+ψ = [KSATClause(bitrand(rng, degree(g, f_vertex(a)))) for a in eachfactor(g)]
 bp = fast_ksat_bp(g, ψ)
 bp_generic = make_generic(bp)
 
