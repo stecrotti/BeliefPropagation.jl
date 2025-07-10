@@ -122,7 +122,7 @@ end
 function BeliefPropagation.update_v_bp!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, v_vertex(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
@@ -138,7 +138,7 @@ end
 function BeliefPropagation.update_f_bp!(bp::BPIsing, a::Integer,
         unew, damp::Real; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ea = edge_indices(g, factor(a))
+    ea = edge_indices(g, f_vertex(a))
     Jₐ = ψ[a].βJ
     @views prodtanh = cavity!(unew[ea], tanh.(h[ea]), *, tanh(Jₐ))
     unew[ea] .= atanh.(unew[ea])
@@ -160,12 +160,12 @@ end
 
 function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
     (; g, ψ, h) = bp
-    return map(factors(g)) do a
+    return map(eachfactor(g)) do a
         ψₐ = ψ[a]
-        ∂a = neighbors(g, factor(a))
+        ∂a = neighbors(g, f_vertex(a))
         bₐ = map(Iterators.product((1:nstates(bp, i) for i in ∂a)...)) do xₐ
             ψₐ(xₐ) * prod(exp(h[ia]*potts2spin(xₐ[i])) 
-                for (i, ia) in pairs(edge_indices(g, factor(a))); init=one(eltype(bp)))
+                for (i, ia) in pairs(edge_indices(g, f_vertex(a))); init=one(eltype(bp)))
         end
         zₐ = sum(bₐ)
         bₐ ./= zₐ
@@ -174,13 +174,13 @@ function BeliefPropagation.factor_beliefs_bp(bp::BPIsing)
 end
 
 function BeliefPropagation.compute_zi(bp::BPIsing, i::Integer, 
-        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, variable(i))])
+        msg_in::AbstractVector{<:Real} = bp.u[edge_indices(bp.g, v_vertex(i))])
     bnew = sum(msg_in, init=bp.ϕ[i].βh) 
     return 2cosh(bnew) / prod(2cosh(uai) for uai in msg_in; init=one(eltype(bp)))
 end
 
 function BeliefPropagation.compute_za(bp::BPIsing, a::Integer, 
-        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, factor(a))])
+        msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, f_vertex(a))])
     Jₐ = bp.ψ[a].βJ
     prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
     return cosh(Jₐ) * (1 + prodtanh)
@@ -193,7 +193,7 @@ end
 function BeliefPropagation.update_v_ms!(bp::BPIsing,
         i::Integer, hnew, bnew, damp::Real, rein::Real; extra_kwargs...)
     (; g, ϕ, u, h, b) = bp
-    ei = edge_indices(g, variable(i)) 
+    ei = edge_indices(g, v_vertex(i)) 
     hᵢ = ϕ[i].βh + b[i]*rein
     bnew[i] = @views cavity!(hnew[ei], u[ei], +, hᵢ)
     errb = abs(bnew[i] - b[i])
@@ -209,7 +209,7 @@ end
 function BeliefPropagation.update_f_ms!(bp::BPIsing, a::Integer,
         unew, damp::Real; extra_kwargs...)
     (; g, ψ, u, h) = bp
-    ea = edge_indices(g, factor(a))
+    ea = edge_indices(g, f_vertex(a))
     Jₐ = ψ[a].βJ
     @views minh = cavity!(unew[ea], abs.(h[ea]), min, convert(eltype(h), abs(Jₐ)))
     signs, = cavity(sign.(h[ea]), *, sign(Jₐ))
@@ -231,10 +231,10 @@ end
 
 function BeliefPropagation.factor_beliefs_ms(bp::BPIsing)
     (; g, ψ, h) = bp
-    return map(factors(g)) do a
+    return map(eachfactor(g)) do a
         ψₐ = ψ[a]
-        bₐ = map(Iterators.product((1:nstates(bp, i) for i in neighbors(g, factor(a)))...)) do xₐ
-            log(ψₐ(xₐ)) + sum(h[ia]*potts2spin(xₐ[i]) for (i, ia) in pairs(edge_indices(g, factor(a))); init=0.0)
+        bₐ = map(Iterators.product((1:nstates(bp, i) for i in neighbors(g, f_vertex(a)))...)) do xₐ
+            log(ψₐ(xₐ)) + sum(h[ia]*potts2spin(xₐ[i]) for (i, ia) in pairs(edge_indices(g, f_vertex(a))); init=0.0)
         end
         zₐ = maximum(bₐ)
         bₐ .-= zₐ

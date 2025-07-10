@@ -4,7 +4,7 @@ using BeliefPropagation: BPFactor, TabulatedBPFactor, BP
 using BeliefPropagation: beliefs_bp, factor_beliefs_bp, bethe_free_energy_bp
 using BeliefPropagation
 using IndexedFactorGraphs: AbstractFactorGraph, FactorGraph, InfiniteRegularFactorGraph,
-    factor, factors, variables, neighbors, edge_indices
+    f_vertex, eachfactor, eachvariable, neighbors, edge_indices
 
 using IndexedGraphs: degree
 using Test: @test
@@ -35,16 +35,16 @@ Return the corresponding `BP` with plain `TabulatedBPFactor` as factors. Used to
 """
 function make_generic(bp::BP)
     (; g, ψ, ϕ) = bp
-    ψ_generic = [BPFactor(ψ[a], nstates(bp, i) for i in neighbors(g, factor(a))) for a in factors(g)]
-    ϕ_generic = [BPFactor(ϕ[i], (nstates(bp, i),)) for i in variables(g)]
-    return BP(g, ψ_generic, [nstates(bp, i) for i in variables(g)]; ϕ = ϕ_generic)
+    ψ_generic = [BPFactor(ψ[a], nstates(bp, i) for i in neighbors(g, f_vertex(a))) for a in eachfactor(g)]
+    ϕ_generic = [BPFactor(ϕ[i], (nstates(bp, i),)) for i in eachvariable(g)]
+    return BP(g, ψ_generic, [nstates(bp, i) for i in eachvariable(g)]; ϕ = ϕ_generic)
 end
 
 function eachstate(bp::BP)
-    return Iterators.product((1:nstates(bp, i) for i in variables(bp.g))...)
+    return Iterators.product((1:nstates(bp, i) for i in eachvariable(bp.g))...)
 end
 
-nstatestot(bp::BP) = prod(nstates(bp, i) for i in variables(bp.g); init=1.0)
+nstatestot(bp::BP) = prod(nstates(bp, i) for i in eachvariable(bp.g); init=1.0)
 
 """
     exact_normalization(bp::BP)
@@ -73,7 +73,7 @@ Exhaustively compute marginal distributions for each variable.
 """
 function exact_marginals(bp::BP; p_exact = exact_prob(bp))
     dims = 1:ndims(p_exact)
-    return map(variables(bp.g)) do i
+    return map(eachvariable(bp.g)) do i
         vec(sum(p_exact; dims=dims[Not(i)]))
     end
 end
@@ -81,12 +81,12 @@ end
 """
     exact_factor_marginals(bp::BP; p_exact = exact_prob(bp))
 
-Exhaustively compute marginal distributions for each factor.
+Exhaustively compute marginal distributions for each f_vertex.
 """
 function exact_factor_marginals(bp::BP; p_exact = exact_prob(bp))
     dims = 1:ndims(p_exact)
-    return map(factors(bp.g)) do a
-        ∂a = neighbors(bp.g, factor(a))
+    return map(eachfactor(bp.g)) do a
+        ∂a = neighbors(bp.g, f_vertex(a))
         dropdims(sum(p_exact; dims=dims[Not(∂a)]); dims=tuple(dims[Not(∂a)]...))
     end
 end
@@ -145,7 +145,7 @@ Return a `BP` with random factors.
 `states` is an iterable containing the number of values that can be taken by each variable.
 """
 function rand_bp(rng::AbstractRNG, g::AbstractFactorGraph, states)
-    ψ = [rand_factor(rng, [states[i] for i in neighbors(g,factor(a))]) for a in factors(g)] 
+    ψ = [rand_factor(rng, [states[i] for i in neighbors(g,f_vertex(a))]) for a in eachfactor(g)] 
     return BP(g, ψ, states)  
 end
 rand_bp(g::AbstractFactorGraph, qs) = rand_bp(default_rng(), g, qs)
@@ -182,8 +182,8 @@ end
 function update_f_bp_old!(bp::BP{F,FV,M,MB}, a::Integer, unew, damp::Real; extra_kwargs...) where {
             F<:BPFactor, FV<:BPFactor, M<:AbstractVector{<:Real}, MB<:AbstractVector{<:Real}}
     (; g, ψ, h) = bp
-    ∂a = neighbors(g, factor(a))
-    ea = edge_indices(g, factor(a))
+    ∂a = neighbors(g, f_vertex(a))
+    ea = edge_indices(g, f_vertex(a))
     ψₐ = ψ[a]
     for ai in ea
         unew[ai] .= 0
@@ -216,8 +216,8 @@ Test a specific implementation of `compute_za` against the naive one.
 function test_za(bp::BP)
     (; g) = bp
     bp_generic = make_generic(bp)
-    eq = map(factors(g)) do a
-        states = (nstates(bp,i) for i in neighbors(g, factor(a)))
+    eq = map(eachfactor(g)) do a
+        states = (nstates(bp,i) for i in neighbors(g, f_vertex(a)))
         msg_in = _rand_msgs(states)
         za = BeliefPropagation.compute_za(bp, a, msg_in)
         za_generic = BeliefPropagation.compute_za(bp_generic, a, msg_in)

@@ -1,7 +1,7 @@
 module BeliefPropagation
 
 using IndexedFactorGraphs: AbstractFactorGraph, InfiniteRegularFactorGraph,
-    nvariables, nfactors, variables, factors, factor, variable,
+    nvariables, nfactors, eachvariable, eachfactor, f_vertex, v_vertex,
     neighbors, edge_indices, edges, dst, ne, degree
 using CavityTools: cavity! 
 using Base.Threads: @threads

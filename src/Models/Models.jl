@@ -1,8 +1,8 @@
 module Models 
 
 using IndexedFactorGraphs: AbstractFactorGraph,
-    pairwise_interaction_graph, factor, variable, edge_indices,
-    nvariables, factors
+    pairwise_interaction_graph, f_vertex, v_vertex, edge_indices,
+    nvariables, eachfactor
 
 using BeliefPropagation: BPFactor, BP, damping, set_messages_factor!, set_messages_variable!
 using BeliefPropagation
