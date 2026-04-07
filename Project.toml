@@ -22,7 +22,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 BlockArrays = "1"
 CavityTools = "0.2.3, 0.3, 1.0, 1.1, 1.2"
-ForwardDiff = "0.10"
+ForwardDiff = "0.10, 1"
 Graphs = "1.9"
 IndexedFactorGraphs = "0.2"
 IndexedGraphs = "0.4.1, 0.5, 0.6"
