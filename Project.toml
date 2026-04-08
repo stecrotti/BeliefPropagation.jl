@@ -1,6 +1,6 @@
 name = "BeliefPropagation"
 uuid = "f47dce41-c8ad-4b69-b8b4-f2a36c7ebdf8"
-authors = ["stecrotti <stefano.crotti@polito.it>"]
+authors = ["stecrotti <s.crotti@outlook.com>"]
 version = "0.5.0"
 
 [deps]
