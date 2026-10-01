@@ -72,7 +72,7 @@ Base.broadcastable(b::BP) = Ref(b)
 """
     reset!(bp::BP)
 
-Reset all messages and beliefs to zero
+Reset all messages and beliefs to uniform
 """
 function reset!(bp::BP)
     (; u, h, b) = bp
