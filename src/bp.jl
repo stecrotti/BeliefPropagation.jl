@@ -212,13 +212,19 @@ function bethe_free_energy_bp_beliefs(bp::BP;
     end
     return fₐ + fᵢ
 end
+
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
 function compute_zi(bp::BP, i::Integer, 
         msg_in = bp.u[edge_indices(bp.g, v_vertex(i))])
-    init = [bp.ϕ[i](x) for x in 1:nstates(bp, i)]
+    init = bp.ϕ[i].(1:nstates(bp, i))
     bnew = reduce(.*, msg_in; init)
     return sum(bnew)
+end
+
+function compute_zai(bp::BP, ai::Integer, 
+        uai = bp.u[ai], hia = bp.h[ai])
+    return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
 end
 
 function compute_za(bp::BP, a::Integer, 
@@ -229,9 +235,19 @@ function compute_za(bp::BP, a::Integer,
         for xₐ in Iterators.product(eachindex.(msg_in)...))
 end
 
-function compute_zai(bp::BP, ai::Integer, 
-        uai = bp.u[ai], hia = bp.h[ai])
-    return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
+"""
+Computes zₐ from messages, which is more efficient than tracing over xₐ
+"""
+function compute_za_from_messages(bp::BP, a)
+    (; g, h, u) = bp
+    za = zero(eltype(bp))
+    ∂a = edge_indices(g, f_vertex(a))
+    for e in ∂a
+        mai, mia = u[e], h[e]
+        # here, mai is not normalized (and that's ok)
+        za += sum(mia[xi]*mai[xi] for xi in eachindex(mia, mai))
+    end
+    za / length(∂a)
 end
 
 function bethe_free_energy_bp(bp::BP)
@@ -242,8 +258,7 @@ function bethe_free_energy_bp(bp::BP)
     f_factors = f_variables = f_edges = 0.0
 
     for a in eachfactor(g)
-        ea = edge_indices(g, f_vertex(a))
-        zₐ = compute_za(bp, a, h[ea])
+        zₐ = compute_za_from_messages(bp, a)
         f_factors += -log(zₐ)
     end
 
@@ -486,11 +501,6 @@ function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
     err = zero(eltype(bp))
     for ai in ea
-        zₐ₂ᵢ = sum(unew[ai])
-        # there can be cases where unew[i] is all zeros -> do not normalize
-        if zₐ₂ᵢ != 0
-            unew[ai] ./= zₐ₂ᵢ
-        end
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damping(u[ai], unew[ai], damp)
     end
