@@ -289,20 +289,11 @@ energy(bp::BP, x) = energy_factors(bp, x) + energy_variables(bp, x)
 
 function energy_factors(bp::BP, x)
     (; g, ψ) = bp
-    w = 0.0
-    for a in eachfactor(g)
-        ∂a = neighbors(g, f_vertex(a))
-        w += -log(ψ[a](x[∂a]))
-    end
-    return w
+    -sum(log(ψ[a](x[neighbors(g, f_vertex(a))])) for a in eachfactor(g))
 end
 function energy_variables(bp::BP, x)
     (; g, ϕ) = bp
-    w = 0.0
-    for i in eachvariable(g)
-        w += -log(ϕ[i](x[i]))
-    end
-    return w
+    -sum(log(ϕ[i](x[i])) for i in eachvariable(g))
 end
 
 """
