@@ -410,21 +410,25 @@ Optional arguments
 function iterate!(bp::BP;
         update_variable! = update_v_bp!,
         update_factor! = update_f_bp!,
-        maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        callbacks::AbstractVector{<:Callback} = [ProgressAndConvergence(maxiter, tol)],
-        extra_kwargs...
+        maxiter = 100, tol = 1e-6, damp::Real = 0.0, rein::Real = 0.0,
+        callbacks = [ProgressAndConvergence(maxiter, tol)],
+        unew = deepcopy(bp.u),
+        hnew = deepcopy(bp.h),
+        bnew = deepcopy(bp.b),
+        f_args = NamedTuple(),
+        v_args = NamedTuple()
         )
-    (; g, u, h, b) = bp
+    g = bp.g
     T = eltype(bp)
-    unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
-    errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
+    errv = zeros(T, nvariables(g))
+    errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
     for it in 1:maxiter
         @threads for a in eachfactor(bp.g)
-            errf[a] = update_factor!(bp, a, unew, damp; extra_kwargs...)
+            errf[a] = update_factor!(bp, a, unew, damp; f_args...)
         end
         @threads for i in eachvariable(bp.g)
-            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; extra_kwargs...)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; v_args...)
         end
         for callback in callbacks
             callback(bp, errv, errf, errb, it) && return it
@@ -477,8 +481,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
 end
 
-function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real;
-        extra_kwargs...)
+function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, v_vertex(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -498,11 +501,9 @@ function set_messages_factor!(bp, ea, unew, damp)
     return err
 end
 
-function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real;
-        extra_kwargs...)
-    (; g, ψ, h) = bp
+function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real)
+    (; g, h) = bp
     ea = edge_indices(g, f_vertex(a))
-    ψₐ = ψ[a]
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
     res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)
