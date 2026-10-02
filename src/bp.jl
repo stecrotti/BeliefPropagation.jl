@@ -242,10 +242,11 @@ function compute_za_from_messages(bp::BP, a)
     (; g, h, u) = bp
     za = zero(eltype(bp))
     ∂a = edge_indices(g, f_vertex(a))
+    isempty(∂a) && return one(eltype(bp))
     for e in ∂a
         mai, mia = u[e], h[e]
         # here, mai is not normalized (and that's ok)
-        za += sum(mia[xi]*mai[xi] for xi in eachindex(mia, mai))
+        za += sum(miaxi*maixi for (miaxi,maixi) in zip(mia, mai))
     end
     za / length(∂a)
 end
@@ -258,7 +259,7 @@ function bethe_free_energy_bp(bp::BP)
     f_factors = f_variables = f_edges = 0.0
 
     for a in eachfactor(g)
-        zₐ = compute_za_from_messages(bp, a)
+        zₐ = compute_za(bp, a)
         f_factors += -log(zₐ)
     end
 

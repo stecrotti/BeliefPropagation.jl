@@ -185,7 +185,7 @@ function BeliefPropagation.compute_za(bp::BPIsing, a::Integer,
     prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
     return cosh(Jₐ) * (1 + prodtanh)
 end
-
+BeliefPropagation.compute_za_from_messages(bp::BPIsing, a::Integer) = compute_za(bp,a)
 function BeliefPropagation.compute_zai(bp::BPIsing, ai::Integer, uai::Real, hia::Real)
     return (1 + tanh(uai)*tanh(hia)) / 2
 end
