@@ -230,25 +230,18 @@ end
 function compute_za(bp::BP, a::Integer, 
     msg_in = bp.h[edge_indices(bp.g, f_vertex(a))])
     ψₐ = bp.ψ[a]
-    isempty(msg_in) && return one(eltype(ψₐ))
+    isempty(msg_in) && return bp.ψ[a](())
     return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
         for xₐ in Iterators.product(eachindex.(msg_in)...))
 end
 
 """
-Computes zₐ from messages, which is more efficient than tracing over xₐ
+Computes zₐ from unnormalized messages, which is more efficient than tracing over xₐ
 """
 function compute_za_from_messages(bp::BP, a)
-    (; g, h, u) = bp
-    za = zero(eltype(bp))
     ∂a = edge_indices(g, f_vertex(a))
-    isempty(∂a) && return one(eltype(bp))
-    for e in ∂a
-        mai, mia = u[e], h[e]
-        # here, mai is not normalized (and that's ok)
-        za += sum(miaxi*maixi for (miaxi,maixi) in zip(mia, mai))
-    end
-    za / length(∂a)
+    isempty(∂a) && return bp.ψ[a](())
+    sum(compute_zai(bp, ai) for ai in ∂a) / length(∂a)
 end
 
 function bethe_free_energy_bp(bp::BP)
@@ -470,7 +463,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
-    for ia in ei        
+    for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
         # there can be cases where hnew[i] is all zeros -> do not normalize
         if zᵢ != 0
