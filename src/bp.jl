@@ -238,8 +238,8 @@ end
 """
 Computes zₐ from unnormalized messages, which is more efficient than tracing over xₐ
 """
-function compute_za_from_messages(bp::BP, a)
-    ∂a = edge_indices(g, f_vertex(a))
+function compute_za_from_messages(bp::BP, a::Integer)
+    ∂a = edge_indices(bp.g, f_vertex(a))
     isempty(∂a) && return bp.ψ[a](())
     sum(compute_zai(bp, ai) for ai in ∂a) / length(∂a)
 end
@@ -252,7 +252,7 @@ function bethe_free_energy_bp(bp::BP)
     f_factors = f_variables = f_edges = 0.0
 
     for a in eachfactor(g)
-        zₐ = compute_za(bp, a)
+        zₐ = compute_za_from_messages(bp, a)
         f_factors += -log(zₐ)
     end
 
@@ -285,6 +285,7 @@ function energy_factors(bp::BP, x)
     (; g, ψ) = bp
     -sum(log(ψ[a](x[neighbors(g, f_vertex(a))])) for a in eachfactor(g))
 end
+
 function energy_variables(bp::BP, x)
     (; g, ϕ) = bp
     -sum(log(ϕ[i](x[i])) for i in eachvariable(g))
