@@ -53,7 +53,7 @@ Arguments
 """
 function BP(g::AbstractFactorGraph, ψ::AbstractVector{<:BPFactor}, states;
         ϕ = fill(UniformFactor(), nvariables(g)))
-    length(states) == nvariables(g) || throw(ArgumentError("Length of `states` must match number of variable nodes, got $(length(states)) and $(nvariables(g))"))
+    length(states) == nvariables(g) == length(ϕ) || throw(ArgumentError("Length of `states`, number of variables, and length of `ϕ` must match, got respectively $(length(states)), $(nvariables(g)), $(length(ϕ))"))
     T = promote_type(eltype(ψ[1]), eltype(ϕ[1]))
     all(eltype(ψₐ) == eltype(ψ[1]) for ψₐ in ψ) || @warn "Possible type issues. Check that all the factors in ψ have the same type"
     all(eltype(ϕᵢ) == eltype(ϕ[1]) for ϕᵢ in ϕ) || @warn "Possible type issues. Check that all the factors in ϕ have the same type"
@@ -72,7 +72,7 @@ Base.broadcastable(b::BP) = Ref(b)
 """
     reset!(bp::BP)
 
-Reset all messages and beliefs to zero
+Reset all messages and beliefs to uniform
 """
 function reset!(bp::BP)
     (; u, h, b) = bp
@@ -212,26 +212,36 @@ function bethe_free_energy_bp_beliefs(bp::BP;
     end
     return fₐ + fᵢ
 end
+
 bethe_free_energy(bp::BP) = bethe_free_energy(bethe_free_energy_bp, bp)
 
 function compute_zi(bp::BP, i::Integer, 
         msg_in = bp.u[edge_indices(bp.g, v_vertex(i))])
-    init = [bp.ϕ[i](x) for x in 1:nstates(bp, i)]
+    init = bp.ϕ[i].(1:nstates(bp, i))
     bnew = reduce(.*, msg_in; init)
     return sum(bnew)
-end
-
-function compute_za(bp::BP, a::Integer, 
-    msg_in = bp.h[edge_indices(bp.g, f_vertex(a))])
-    ψₐ = bp.ψ[a]
-    isempty(msg_in) && return one(eltype(ψₐ))
-    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
-        for xₐ in Iterators.product(eachindex.(msg_in)...))
 end
 
 function compute_zai(bp::BP, ai::Integer, 
         uai = bp.u[ai], hia = bp.h[ai])
     return sum(uaix * hiax for(uaix, hiax) in zip(uai, hia))
+end
+
+function compute_za(bp::BP, a::Integer, 
+    msg_in = bp.h[edge_indices(bp.g, f_vertex(a))])
+    ψₐ = bp.ψ[a]
+    isempty(msg_in) && return bp.ψ[a](())
+    return sum(ψₐ(xₐ) * prod(m[xᵢ] for (m, xᵢ) in zip(msg_in, xₐ)) 
+        for xₐ in Iterators.product(eachindex.(msg_in)...))
+end
+
+"""
+Computes zₐ from unnormalized messages, which is more efficient than tracing over xₐ
+"""
+function compute_za_from_messages(bp::BP, a::Integer)
+    ∂a = edge_indices(bp.g, f_vertex(a))
+    isempty(∂a) && return bp.ψ[a](())
+    sum(compute_zai(bp, ai) for ai in ∂a) / length(∂a)
 end
 
 function bethe_free_energy_bp(bp::BP)
@@ -242,8 +252,7 @@ function bethe_free_energy_bp(bp::BP)
     f_factors = f_variables = f_edges = 0.0
 
     for a in eachfactor(g)
-        ea = edge_indices(g, f_vertex(a))
-        zₐ = compute_za(bp, a, h[ea])
+        zₐ = compute_za_from_messages(bp, a)
         f_factors += -log(zₐ)
     end
 
@@ -274,20 +283,12 @@ energy(bp::BP, x) = energy_factors(bp, x) + energy_variables(bp, x)
 
 function energy_factors(bp::BP, x)
     (; g, ψ) = bp
-    w = 0.0
-    for a in eachfactor(g)
-        ∂a = neighbors(g, f_vertex(a))
-        w += -log(ψ[a](x[∂a]))
-    end
-    return w
+    -sum(log(ψ[a](x[neighbors(g, f_vertex(a))])) for a in eachfactor(g))
 end
+
 function energy_variables(bp::BP, x)
     (; g, ϕ) = bp
-    w = 0.0
-    for i in eachvariable(g)
-        w += -log(ϕ[i](x[i]))
-    end
-    return w
+    -sum(log(ϕ[i](x[i])) for i in eachvariable(g))
 end
 
 """
@@ -404,21 +405,25 @@ Optional arguments
 function iterate!(bp::BP;
         update_variable! = update_v_bp!,
         update_factor! = update_f_bp!,
-        maxiter=100, tol=1e-6, damp::Real=0.0, rein::Real=0.0,
-        callbacks::AbstractVector{<:Callback} = [ProgressAndConvergence(maxiter, tol)],
-        extra_kwargs...
+        maxiter = 100, tol = 1e-6, damp::Real = 0.0, rein::Real = 0.0,
+        callbacks = [ProgressAndConvergence(maxiter, tol)],
+        unew = deepcopy(bp.u),
+        hnew = deepcopy(bp.h),
+        bnew = deepcopy(bp.b),
+        f_args = NamedTuple(),
+        v_args = NamedTuple()
         )
-    (; g, u, h, b) = bp
+    g = bp.g
     T = eltype(bp)
-    unew = deepcopy(u); hnew = deepcopy(h); bnew = deepcopy(b)
-    errv = zeros(T, nvariables(g)); errf = zeros(T, nfactors(g))
+    errv = zeros(T, nvariables(g))
+    errf = zeros(T, nfactors(g))
     errb = zeros(T, nvariables(g))
     for it in 1:maxiter
         @threads for a in eachfactor(bp.g)
-            errf[a] = update_factor!(bp, a, unew, damp; extra_kwargs...)
+            errf[a] = update_factor!(bp, a, unew, damp; f_args...)
         end
         @threads for i in eachvariable(bp.g)
-            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; extra_kwargs...)
+            errv[i], errb[i] = update_variable!(bp, i, hnew, bnew, damp, rein*it; v_args...)
         end
         for callback in callbacks
             callback(bp, errv, errf, errb, it) && return it
@@ -459,7 +464,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     errb = maximum(abs, bnew[i] - b[i])
     b[i] = bnew[i]
     errv = zero(eltype(bp))
-    for ia in ei        
+    for ia in ei
         zᵢ₂ₐ = sum(hnew[ia])
         # there can be cases where hnew[i] is all zeros -> do not normalize
         if zᵢ != 0
@@ -471,8 +476,7 @@ function set_messages_variable!(bp, ei, i, hnew, bnew, damp)
     return errv, errb
 end
 
-function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real;
-        extra_kwargs...)
+function update_v_bp!(bp::BPGeneric, i::Integer, hnew, bnew, damp::Real, rein::Real)
     (; g, ϕ, u, b) = bp
     ei = edge_indices(g, v_vertex(i)) 
     ϕᵢ = [ϕ[i](x) * b[i][x]^rein for x in 1:nstates(bp, i)]
@@ -486,22 +490,15 @@ function set_messages_factor!(bp, ea, unew, damp)
     u = bp.u
     err = zero(eltype(bp))
     for ai in ea
-        zₐ₂ᵢ = sum(unew[ai])
-        # there can be cases where unew[i] is all zeros -> do not normalize
-        if zₐ₂ᵢ != 0
-            unew[ai] ./= zₐ₂ᵢ
-        end
         err = max(err, maximum(abs, unew[ai] - u[ai]))
         u[ai] = damping(u[ai], unew[ai], damp)
     end
     return err
 end
 
-function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real;
-        extra_kwargs...)
-    (; g, ψ, h) = bp
+function update_f_bp!(bp::BPGeneric, a::Integer, unew, damp::Real)
+    (; g, h) = bp
     ea = edge_indices(g, f_vertex(a))
-    ψₐ = ψ[a]
     hflat = @views mortar(h[ea])
     uflat = @views mortar(unew[ea])
     res = ForwardDiff.DiffResult(zero(eltype(uflat)), uflat)

@@ -182,9 +182,11 @@ end
 function BeliefPropagation.compute_za(bp::BPIsing, a::Integer, 
         msg_in::AbstractVector{<:Real} = bp.h[edge_indices(bp.g, f_vertex(a))])
     Jₐ = bp.ψ[a].βJ
-    prodtanh = prod(tanh, msg_in, init=tanh(Jₐ))
-    return cosh(Jₐ) * (1 + prodtanh)
+    return cosh(Jₐ) * (1 + tanh(Jₐ) * prod(tanh, msg_in))
 end
+
+BeliefPropagation.compute_za_from_messages(bp::BPIsing, a::Integer) = 
+    BeliefPropagation.compute_za(bp,a)
 
 function BeliefPropagation.compute_zai(bp::BPIsing, ai::Integer, uai::Real, hia::Real)
     return (1 + tanh(uai)*tanh(hia)) / 2

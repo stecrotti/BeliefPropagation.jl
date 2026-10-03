@@ -29,6 +29,10 @@ function BeliefPropagation.compute_za(bp::BP{<:KSATClause}, a::Integer,
     return z1 - z2
 end
 
+BeliefPropagation.compute_za_from_messages(bp::BP{<:KSATClause}, a::Integer, 
+        msg_in = bp.h[edge_indices(bp.g, f_vertex(a))]) = 
+    BeliefPropagation.compute_za(bp::BP, a, msg_in)
+
 const BPKSAT = BP{<:KSATClause, <:BPFactor, <:Real, <:Real}
 
 
